@@ -165,16 +165,20 @@ const formatCategoryLabel = (key) => {
 
     if (!email.trim()) {
       newErrors.email = 'Email is required';
+      setLoading(false); 
     } else if (!isValidEmail(email)) {
       newErrors.email = 'Enter a valid email address';
+      setLoading(false);
     }
 
     if (!subject.trim()) {
       newErrors.subject = 'Subject is required';
+      setLoading(false);
     }
 
     if (!description.trim()) {
       newErrors.description = 'Describe the problem is required';
+      setLoading(false);
     }
 
     setErrors(newErrors);
