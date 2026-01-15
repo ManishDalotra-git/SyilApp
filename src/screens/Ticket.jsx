@@ -153,6 +153,7 @@ const formatCategoryLabel = (key) => {
 
 
  const handleSubmit = async () => {
+  setLoading(true); 
     let newErrors = {};
     
 
