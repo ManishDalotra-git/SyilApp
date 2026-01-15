@@ -69,10 +69,10 @@ const checkLoginStatus = async () => {
     }
 
     const now = Date.now();
-    const diffInMinutes =
-      (now - Number(lastLoginTime)) / 1000 / 60;
+    const diffInDays =
+      (now - Number(lastLoginTime)) / 1000 / 60 / 60 / 24;
 
-    if (diffInMinutes > 2) {
+    if (diffInDays > 7) {
       await AsyncStorage.clear();
       navigation.replace('Login');
     } else {

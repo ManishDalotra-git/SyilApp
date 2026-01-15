@@ -154,7 +154,7 @@ const formatCategoryLabel = (key) => {
 
  const handleSubmit = async () => {
     let newErrors = {};
-    setLoading(true);
+    
 
 
     const uploadResult = await uploadToServer(files);
