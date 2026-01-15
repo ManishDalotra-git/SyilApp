@@ -57,7 +57,7 @@ const Login = () => {
     // };
 
 
-
+//'http://192.168.0.74:3000/check_login_detail'
 
 const handleSubmit = async () => {
   setLoading(true);
