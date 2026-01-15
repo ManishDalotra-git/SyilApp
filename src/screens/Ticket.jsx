@@ -134,7 +134,7 @@ const formatCategoryLabel = (key) => {
       });
     });
 
-    const res = await fetch('https://syilapp.onrender.com/upload-to-hubspot', {
+    const res = await fetch('http://192.168.0.74:3000/upload-to-hubspot', {
       method: 'POST',
       body: formData,
       headers: {
@@ -201,7 +201,7 @@ const formatCategoryLabel = (key) => {
       };
 
       try {
-        const responseEmail = await fetch('https://syilapp.onrender.com/get-contact-id', {
+        const responseEmail = await fetch('http://192.168.0.74:3000/get-contact-id', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: ticketData.email }),
@@ -227,7 +227,7 @@ const formatCategoryLabel = (key) => {
 
 
       // 2️⃣ Create Ticket
-      const responseTicket = await fetch('https://syilapp.onrender.com/create-ticket', {
+      const responseTicket = await fetch('http://192.168.0.74:3000/create-ticket', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contactId, ticketData }),
