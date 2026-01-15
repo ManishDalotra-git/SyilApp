@@ -37,7 +37,7 @@ const { ticketId } = route.params || {};
             </Text>
         )} 
 
-        <Pressable onPress={() => navigation.navigate('ThankYou')} style={styles.card}>
+        <Pressable onPress={() => navigation.navigate('KnowledgeBase')} style={styles.card}>
             <View style={styles.button} >
             <Text style={styles.buttonText}>Explore Knowledge Base</Text>
             </View>
