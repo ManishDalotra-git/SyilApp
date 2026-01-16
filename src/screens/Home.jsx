@@ -8,7 +8,7 @@ const Home = () => {
   StatusBar.setBackgroundColor('transparent');
   StatusBar.setBarStyle('light-content'); 
 
-  const navigation = useNavigation();
+  const navigation = useNavigation();  
   return (
     <ImageBackground source={require('../../images/Login_System.png')}  style={styles.background}
       resizeMode="cover">
@@ -117,4 +117,5 @@ const styles = StyleSheet.create({
     color: '#000',
     marginLeft: 10,
   },
+  
 })

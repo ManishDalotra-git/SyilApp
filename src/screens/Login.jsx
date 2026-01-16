@@ -187,14 +187,12 @@ const handleSubmit = async () => {
       </ScrollView>
 
       <Modal visible={loading} transparent animationType="fade">
-            <View style={styles.loadingContainer}>
-                {/* <Image
-                source={require('../../images/loading.gif')}
-                style={styles.loadingGif}
-                /> */}
-                <Text style={{ fontSize:24,fontWeight:700 }}>Please wait...</Text>
-            </View>
-        </Modal>
+        <View style={styles.loadingOverlay}>
+          {/* You can uncomment the GIF if you want */}
+          {/* <Image source={require('../../images/loading.gif')} style={styles.loadingGif} /> */}
+          <Text style={styles.loadingText}>Please wait...</Text>
+        </View>
+      </Modal>
     </ImageBackground>
   );
 };
@@ -291,37 +289,54 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 20,
   },
-    passwordContainer: {
+  passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F2F2F2',
     borderRadius: 100,
     paddingHorizontal: 15,
     height: 48,
-    },
-    passwordInput: {
+  },
+  passwordInput: {
     flex: 1,
     fontSize: 16,
     color:'#000',
-    },
-    eyeIcon: {
+  },
+  eyeIcon: {
     width: 22,
     resizeMode: 'contain',
-    },
+  },
     hideIcon: {
     height: 19,
-    },
-    showIcon: {
+  },
+  showIcon: {
     height: 16,
-    },
-    loadingContainer: {
+  },
+  loadingContainer: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.78)',
     justifyContent: 'center',
     alignItems: 'center',
-    },
-    loadingGif: {
+  },
+  loadingGif: {
     width: 150,
     height: 150,
-    },
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000',
+    textAlign: 'center',
+  },
 });
