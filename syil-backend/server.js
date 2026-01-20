@@ -386,6 +386,91 @@ app.post('/forgot_password', async (req, res) => {
 });
 
 
+app.post('/submit-feedback', async (req, res) => {
+  const { email, subject, message, rating } = req.body;
+
+  console.log('req__body_____ ', req.body);
+
+  if (!email || !subject) {
+    return res.status(400).json({ error: 'Email and Subject are required' });
+  }
+
+  try {
+    const fetch = (...args) =>
+      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+    // -------- Step 1: Search contact --------
+    const searchResponse = await fetch(
+      'https://api.hubapi.com/crm/v3/objects/contacts/search',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+        },
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                { propertyName: 'email', operator: 'EQ', value: email },
+              ],
+            },
+          ],
+          properties: ['email'],
+        }),
+      }
+    );
+
+    const searchData = await searchResponse.json();
+
+    if (!searchResponse.ok || !searchData.results?.length) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+
+    const contactId = searchData.results[0].id;
+
+    // -------- Step 2: Create Feedback object & associate with contact --------
+    const HUBSPOT_FEEDBACK_OBJECT_ID = '2-56321597'; // your feedback object type
+
+    const feedbackResponse = await fetch(
+      `https://api.hubapi.com/crm/v3/objects/${HUBSPOT_FEEDBACK_OBJECT_ID}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          properties: {
+            subject: subject,
+            what_went_wrong: message,
+            rating: rating,
+          },
+          associations: [
+            {
+              to: { id: contactId },
+              types: [{ associationCategory: 'USER_DEFINED', associationTypeId: 131 }]
+            }
+          ]
+        })
+      }
+    );
+
+    const feedbackData = await feedbackResponse.json();
+
+    if (!feedbackResponse.ok) {
+      return res.status(feedbackResponse.status).json(feedbackData);
+    }
+
+    res.json({ success: true, feedback: feedbackData, contactId });
+
+  } catch (error) {
+    console.error('Submit Feedback Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
 // app.listen(PORT,'0.0.0.0', () => console.log(`Server running on http://localhost:${PORT}`));

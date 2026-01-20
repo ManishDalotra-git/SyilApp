@@ -88,6 +88,7 @@ const handleSubmit = async () => {
       'lastLoginTime',
       Date.now().toString()
     );
+    await AsyncStorage.setItem('userEmail', username);
 
     setLoading(false);
     navigation.replace('Home');

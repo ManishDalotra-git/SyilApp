@@ -10,6 +10,10 @@ import Login from './src/screens/Login';
 import ForgotPassword from './src/screens/ForgotPassword';
 import KnowledgeBase from './src/screens/KnowledgeBase';
 import KnowledgeDetail from './src/screens/KnowledgeDetail';
+import More from './src/screens/More';
+import Feedback from './src/screens/Feedback';
+import AskAlex from './src/screens/AskAlex';
+
 import { NavigationContainer } from '@react-navigation/native';
 
 const Stack = createNativeStackNavigator();
@@ -27,6 +31,9 @@ const App = () => {
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} options={{ headerShown: false }} />
         <Stack.Screen name="KnowledgeBase" component={KnowledgeBase} options={{ headerShown: false }} />
         <Stack.Screen name="KnowledgeDetail" component={KnowledgeDetail} options={{ title: 'Article', headerShown: false }} />
+        <Stack.Screen name="More" component={More} options={{ headerShown: false }} />
+        <Stack.Screen name="Feedback" component={Feedback} options={{ headerShown: false }} />
+        <Stack.Screen name="AskAlex" component={AskAlex} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   )

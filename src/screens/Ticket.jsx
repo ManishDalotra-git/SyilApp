@@ -15,7 +15,6 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
-
 const Ticket = () => {
 
   const insets = useSafeAreaInsets();
@@ -28,45 +27,66 @@ const Ticket = () => {
   const [loading, setLoading] = useState(false);
 
 
-  const requestGalleryPermission = async () => {
-  if (Platform.OS !== 'android') return true;
+//   const requestGalleryPermission = async () => {
+//   if (Platform.OS !== 'android') return true;
 
-  try {
-    const granted = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-      {
-        title: 'Gallery Permission',
-        message: 'App needs access to your photos and videos',
-        buttonPositive: 'Allow',
-        buttonNegative: 'Cancel',
-      }
-    );
+//   try {
+//     const granted = await PermissionsAndroid.request(
+//       PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+//       {
+//         title: 'Gallery Permission',
+//         message: 'App needs access to your photos and videos',
+//         buttonPositive: 'Allow',
+//         buttonNegative: 'Cancel',
+//       }
+//     );
 
-    return granted === PermissionsAndroid.RESULTS.GRANTED;
-  } catch (err) {
-    console.warn(err);
-    return false;
-  }
-};
+//     return granted === PermissionsAndroid.RESULTS.GRANTED;
+//   } catch (err) {
+//     console.warn(err);
+//     return false;
+//   }
+// };
 
-const pickFiles = async () => {
-  const hasPermission = await requestGalleryPermission();
+// const pickFiles = async () => {
+//   const hasPermission = await requestGalleryPermission();
 
-  if (!hasPermission) {
-    Alert.alert(
-      'Permission Required',
-      'Please allow gallery access to upload photos/videos'
-    );
-    return;
-  }
+//   if (!hasPermission) {
+//     Alert.alert(
+//       'Permission Required',
+//       'Please allow gallery access to upload photos/videos'
+//     );
+//     return;
+//   }
 
+//   launchImageLibrary(
+//     {
+//       mediaType: 'mixed',
+//       selectionLimit: 0,
+//     },
+//     response => {
+//       if (!response.didCancel && response.assets) {
+//         setFiles(response.assets);
+//       }
+//     }
+//   );
+// };
+
+const pickFiles = () => {
   launchImageLibrary(
     {
       mediaType: 'mixed',
       selectionLimit: 0,
     },
     response => {
-      if (!response.didCancel && response.assets) {
+      if (response.didCancel) return;
+
+      if (response.errorCode) {
+        Alert.alert('Error', response.errorMessage || 'Something went wrong');
+        return;
+      }
+
+      if (response.assets) {
         setFiles(response.assets);
       }
     }
@@ -153,9 +173,8 @@ const formatCategoryLabel = (key) => {
 
 
  const handleSubmit = async () => {
-  setLoading(true); 
     let newErrors = {};
-    
+    setLoading(true);
 
 
     const uploadResult = await uploadToServer(files);
@@ -165,7 +184,7 @@ const formatCategoryLabel = (key) => {
 
     if (!email.trim()) {
       newErrors.email = 'Email is required';
-      setLoading(false); 
+      setLoading(false);
     } else if (!isValidEmail(email)) {
       newErrors.email = 'Enter a valid email address';
       setLoading(false);

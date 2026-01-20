@@ -7,15 +7,16 @@ const Home = () => {
   StatusBar.setTranslucent(true);
   StatusBar.setBackgroundColor('transparent');
   StatusBar.setBarStyle('light-content'); 
-
-  const navigation = useNavigation();  
+   
+  const navigation = useNavigation();
   return (
     <ImageBackground source={require('../../images/Login_System.png')}  style={styles.background}
       resizeMode="cover">
       <ScrollView contentContainerStyle={styles.container}>
-      <Image source={require('../../images/syil logo 1.png')} style={styles.logo} />
-
-      <Text style={styles.welcome}>Welcome back!</Text>
+      <View>
+        <Image source={require('../../images/syil_logo_white.png')} style={styles.logo} />
+      </View>
+      <Text style={styles.welcome}>Dealer News</Text>
 
       <Pressable onPress={() => navigation.navigate('KnowledgeBase')} style={styles.card}>
         <View style={styles.cardFlex} >
@@ -73,8 +74,10 @@ const styles = StyleSheet.create({
     height: 50,
     resizeMode: 'contain',
     marginTop: 0,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     marginLeft: 0,
+    marginVertical:'auto',
+    justifyContent:'center',
   },
   welcome: {
     color: '#fff',
@@ -117,5 +120,4 @@ const styles = StyleSheet.create({
     color: '#000',
     marginLeft: 10,
   },
-  
 })
