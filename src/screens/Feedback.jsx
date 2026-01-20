@@ -43,7 +43,7 @@ const Feedback = () => {
   /* ---------------- Submit Feedback ---------------- */
   const handleSubmit = async () => {
     let newErrors = {};
-    if (!subject) newErrors.subject = true;
+    if (!subject) newErrors.subject = true;  
     if (!message.trim()) newErrors.message = true;
     if (!rating) newErrors.rating = true;
 
