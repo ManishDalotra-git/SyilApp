@@ -43,7 +43,7 @@ const Feedback = () => {
   /* ---------------- Submit Feedback ---------------- */
   const handleSubmit = async () => {
     let newErrors = {};
-    if (!subject) newErrors.subject = true;  
+    if (!subject) newErrors.subject = true;
     if (!message.trim()) newErrors.message = true;
     if (!rating) newErrors.rating = true;
 
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   header: {
-    height: 40,
+    height: 45,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,

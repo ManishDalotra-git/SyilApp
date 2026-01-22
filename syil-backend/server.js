@@ -472,5 +472,51 @@ app.post('/submit-feedback', async (req, res) => {
 
 
 
+app.post('/update-profile', async (req, res) => {
+  const { contactId, firstName, lastName, bio, phone, gender, image } = req.body;
+
+  try {
+    const fetch = (...args) =>
+      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+    const response = await fetch(
+      `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+        },
+        body: JSON.stringify({
+          properties: {
+            firstname: firstName,
+            lastname: lastName,
+            bio,
+            phone,
+            gender,
+            hs_avatar_url: image,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const err = await response.text();
+      return res.status(400).json({ err });
+    }
+
+    res.json({
+      success: true,
+      user: { firstName, lastName, bio, phone, gender, profileImage: image },
+    });
+
+  } catch (e) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
+
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
 // app.listen(PORT,'0.0.0.0', () => console.log(`Server running on http://localhost:${PORT}`));

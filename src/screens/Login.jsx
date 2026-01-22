@@ -12,6 +12,7 @@ import React, { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
+import { setContactId } from '../utils/hiddenFields';
 
 const Login = () => {
 
@@ -25,39 +26,6 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [secure, setSecure] = useState(true);
   const [loading, setLoading] = useState(false);
-
-    // const handleSubmit = async () => {
-    // setLoading(true); 
-    // try {
-    //     const response = await fetch(
-    //     'http://192.168.0.74:3000/check_login_detail',
-    //         {
-    //             method: 'POST',
-    //             headers: { 'Content-Type': 'application/json' },
-    //             body: JSON.stringify({
-    //             email: username,
-    //             password: password,
-    //             }),
-    //         }
-    //     );
-    //     const result = await response.json();
-    //     console.log('Login Result:', result);
-    //     if (!response.ok) {
-    //         setLoading(false); 
-    //         alert(result.message || 'Login failed');
-    //         return;
-    //     }
-    //     navigation.replace('Home');
-    //     setLoading(false);
-    //     } catch (error) {
-    //         setLoading(false);
-    //         console.log('Network Error:', error);
-    //         alert('Network request failed.');
-    //     }
-    // };
-
-
-//'http://192.168.0.74:3000/check_login_detail'
 
 const handleSubmit = async () => {
   setLoading(true);
@@ -76,6 +44,7 @@ const handleSubmit = async () => {
       );
 
     const result = await response.json();
+    console.log('result------ ', result);
     if (!response.ok) {
       setLoading(false);
       alert(result.message || 'Login failed');
@@ -89,6 +58,20 @@ const handleSubmit = async () => {
       Date.now().toString()
     );
     await AsyncStorage.setItem('userEmail', username);
+    //await AsyncStorage.setItem('userData', JSON.stringify(result.user));
+    setContactId(result.contactId);
+    await AsyncStorage.setItem(
+      'userData',
+      JSON.stringify({
+        ...result.user,
+        contactId: result.contactId,
+      })
+    );
+    console.log('result.user----- ', result.user);
+
+    
+
+    
 
     setLoading(false);
     navigation.replace('Home');
@@ -114,10 +97,12 @@ const handleSubmit = async () => {
         showsVerticalScrollIndicator={false}>
         
         {/* Logo */}
+        <View style={styles.logoAlign} >
         <Image
-          source={require('../../images/syillogo1.png')}
+          source={require('../../images/syil_logo_white.png')}
           style={styles.logo}
         />
+        </View> 
 
         {/* Welcome Text */}
         <Text style={styles.welcome}>Welcome back!</Text>
@@ -216,8 +201,10 @@ const styles = StyleSheet.create({
     height: 50,
     resizeMode: 'contain',
     marginTop: 0,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     marginLeft: 0,
+    marginVertical:'auto',
+    justifyContent:'center',
   },
   welcome: {
     color: '#fff',
@@ -290,39 +277,40 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 20,
   },
-  passwordContainer: {
+    passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F2F2F2',
     borderRadius: 100,
     paddingHorizontal: 15,
     height: 48,
-  },
-  passwordInput: {
+    },
+    passwordInput: {
     flex: 1,
     fontSize: 16,
     color:'#000',
-  },
-  eyeIcon: {
+    },
+    eyeIcon: {
     width: 22,
     resizeMode: 'contain',
-  },
+    },
     hideIcon: {
     height: 19,
-  },
-  showIcon: {
+    },
+    showIcon: {
     height: 16,
-  },
-  loadingContainer: {
+    },
+    loadingContainer: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.78)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingGif: {
+    },
+    loadingGif: {
     width: 150,
     height: 150,
-  },
+    },
+
   loadingOverlay: {
     position: 'absolute',
     top: 0,

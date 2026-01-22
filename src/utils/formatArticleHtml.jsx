@@ -14,17 +14,14 @@ export const formatArticleHtml = (body) => {
             color: #333;
             line-height: 1.6;
           }
-
+          
           table {
             width: 100% !important;
             max-width: 100% !important;
-            border-collapse: collapse;
-            display: block;
-            overflow-x: auto;
           }
 
           th, td {
-            border: 1px solid #ccc;
+            border: 1px solid #ff0000;
             padding: 8px;
             font-size: 14px;
             text-align: left;
@@ -38,6 +35,7 @@ export const formatArticleHtml = (body) => {
           img {
             max-width: 100%;
             height: auto;
+            cursor: pointer;
           }
 
           p {

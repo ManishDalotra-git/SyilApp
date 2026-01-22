@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,18 +6,117 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
-  Platform
+  Platform,
+  Modal,
+  TextInput,
+  Pressable,
+  ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getContactId, setContactId } from '../utils/hiddenFields';
+import { Picker } from '@react-native-picker/picker';
 
 const Profile = ({ navigation }) => {
 
   StatusBar.setBarStyle('dark-content');
   StatusBar.setBackgroundColor('#fff');
 
+  const [user, setUser] = useState(null);
+  const [editVisible, setEditVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    bio: '',
+    phone: '',
+    gender: '',
+    image: '',
+  });
+
+  // 🔹 Load user
+  useEffect(() => {
+    const getUser = async () => {
+      const data = await AsyncStorage.getItem('userData');
+      if (data) {
+        const parsed = JSON.parse(data);
+        setUser(parsed);
+        setContactId(parsed.contactId); // 🔒 hidden
+      }
+    };
+    getUser();
+  }, []);
+
+  // 🔹 Fill form
+  useEffect(() => {
+    if (user) {
+      setForm({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        bio: user.bio || '',
+        phone: user.phone || '',
+        gender: user.gender || '',
+        image: user.profileImage || '',
+      });
+    }
+  }, [user]);
+
+  const getInitials = (firstName = '', lastName = '') => {
+    const f = firstName?.charAt(0)?.toUpperCase() || '';
+    const l = lastName?.charAt(0)?.toUpperCase() || '';
+    return `${f}${l}`;
+  };
+
+  // 🔥 SAVE PROFILE (API CALL)
+  const handleSaveProfile = async () => {
+    const contactId = getContactId();
+    if (!contactId) return alert('Contact ID missing');
+
+    setLoading(true); // show loading
+
+    try {
+      const response = await fetch(
+        'https://syilapp.onrender.com/update-profile',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contactId,
+            firstName: form.firstName,
+            lastName: form.lastName,
+            bio: form.bio,
+            phone: form.phone,
+            gender: form.gender,
+            profileImage: form.image,
+          }),
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) {
+        alert('Profile update failed');
+        setLoading(false);
+        return;
+      }
+
+      alert('Profile updated');
+
+      const updatedUser = { ...user, ...result.user };
+      await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      setEditVisible(false);
+      setLoading(false);
+
+    } catch (e) {
+      alert('Network error');
+      setLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
 
-      {/* Header */}
+      {/* Header (SAME) */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Image
@@ -25,31 +124,37 @@ const Profile = ({ navigation }) => {
             style={styles.arrowIcon}
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Ask Alex</Text>
+        <Text style={styles.headerTitle}>Profile</Text>
       </View>
 
-      {/* Profile Section */}
+      {/* Profile Section (SAME) */}
       <View style={styles.profileSection}>
-
         <View style={styles.avatarWrapper}>
-          <View style={styles.avatar}>
-            <Image
-              source={require('../../images/profileEditor.png')}
-              style={styles.avatarIcon}
-            />
+          <View style={styles.initialsAvatar}>
+            <Text style={styles.initialsText}>
+              {getInitials(user?.firstName, user?.lastName)}
+            </Text>
           </View>
 
-          {/* <View style={styles.editBadge}>
-            <Text style={styles.editText}>✎</Text>
-          </View> */}
+          {/* EDIT ICON (same position) */}
+          <Pressable
+            style={styles.avatar}
+            onPress={() => setEditVisible(true)}
+          >
+            <Image
+              source={require('../../images/editorIcon.png')}
+              style={styles.avatarIcon}
+            />
+          </Pressable>
         </View>
 
-        <Text style={styles.name}>Ajay Rana</Text>
-        <Text style={styles.email}>design@techstriker.com</Text>
-
+        <Text style={styles.name}>
+          {user?.firstName} {user?.lastName}
+        </Text>
+        <Text style={styles.email}>{user?.email}</Text>
       </View>
 
-      {/* Logout Button */}
+      {/* Logout Button (SAME) */}
       <TouchableOpacity style={styles.logoutBtn}>
         <Image
           source={require('../../images/logout.png')}
@@ -58,6 +163,100 @@ const Profile = ({ navigation }) => {
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
 
+      {/* 🔽 EDIT PROFILE MODAL */}
+      <Modal visible={editVisible} animationType="slide">
+        <ScrollView contentContainerStyle={{ padding: 20 }}>
+          <Text style={styles.modalTitle}>Edit Profile</Text>
+
+          {/* FIELD: First Name */}
+          <View style={styles.inputWrapper}>
+            <View style={styles.iconText}>
+              <Image source={require('../../images/user_icon.png')} style={styles.fieldIcon}/>
+              <Text style={styles.label}>First Name</Text>
+            </View>
+            <TextInput
+              placeholder="First Name"
+              style={styles.input}
+              value={form.firstName}
+              onChangeText={(v) => setForm({ ...form, firstName: v })}
+            />
+          </View>
+
+          {/* FIELD: Last Name */}
+          <View style={styles.inputWrapper}>
+            <View style={styles.iconText}>
+              <Image source={require('../../images/user_icon.png')} style={styles.fieldIcon}/>
+              <Text style={styles.label}>Last Name</Text>
+            </View>
+            <TextInput
+              placeholder="Last Name"
+              style={styles.input}
+              value={form.lastName}
+              onChangeText={(v) => setForm({ ...form, lastName: v })}
+            />
+          </View>
+
+          {/* FIELD: Bio */}
+          <View style={styles.inputWrapper}>
+            <View style={styles.iconText}>
+              <Image source={require('../../images/bio_icon.png')} style={styles.fieldIcon}/>
+              <Text style={styles.label}>Bio</Text>
+            </View>
+            <TextInput
+              placeholder="Bio"
+              style={styles.input}
+              value={form.bio}
+              onChangeText={(v) => setForm({ ...form, bio: v })}
+            />
+          </View>
+
+          {/* FIELD: Phone */}
+          <View style={styles.inputWrapper}>
+            <View style={styles.iconText}>
+              <Image source={require('../../images/phone_icon.png')} style={styles.fieldIcon}/>
+              <Text style={styles.label}>Phone</Text>
+            </View>
+            <TextInput
+              placeholder="Phone"
+              style={styles.input}
+              value={form.phone}
+              onChangeText={(v) => setForm({ ...form, phone: v })}
+            />
+          </View>
+
+          {/* FIELD: Gender */}
+          <View style={styles.inputWrapper}>
+            <View style={styles.iconText}>
+              <Image source={require('../../images/gender_icon.png')} style={styles.fieldIcon}/>
+              <Text style={styles.label}>Gender</Text>
+            </View>
+            <TextInput
+              placeholder="Gender"
+              style={styles.input}
+              value={form.gender}
+              onChangeText={(v) => setForm({ ...form, gender: v })}
+            />
+          </View>
+
+          {/* SAVE BUTTON */}
+          <Pressable style={styles.saveBtn} onPress={handleSaveProfile}>
+            <Text style={styles.saveText}>Save</Text>
+          </Pressable>
+
+          <Pressable style={styles.saveBtnCancel} onPress={() => setEditVisible(false)}>
+            <Text style={styles.saveTextCancel}>Cancel</Text>
+          </Pressable>
+
+        </ScrollView>
+      </Modal>
+
+      {/* 🔽 LOADING MODAL */}
+      <Modal visible={loading} transparent animationType="fade">
+        <View style={styles.loadingContainer}>
+          <Text style={{ fontSize: 24, fontWeight: '700' }}>Please wait...</Text>
+        </View>
+      </Modal>
+
     </View>
   );
 };
@@ -65,104 +264,39 @@ const Profile = ({ navigation }) => {
 export default Profile;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? 40 : 20
-  },
+  container: { flex: 1, backgroundColor: '#fff', paddingTop: Platform.OS === 'android' ? 40 : 20 },
 
-  header: {
-    height: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  arrowIcon: {
-    width: 11.86,
-    height: 21.21,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-    width: '94%',
-  },
+  header: { height: 65, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+  arrowIcon: { width: 11.86, height: 21.21 },
+  headerTitle: { fontSize: 24, fontWeight: '700', textAlign: 'center', width: '94%' },
 
-  profileSection: {
-    alignItems: 'center',
-    marginTop: 20
-  },
+  profileSection: { alignItems: 'center', marginTop: 20 },
+  initialsAvatar:{width:104,height:104,backgroundColor:'#000',borderRadius:104,justifyContent:'center', alignItems:'center',position:'relative,'},
+  initialsText:{color:'#FFEA00',fontSize:36,fontWeight:'700',},
+  avatarWrapper: { position: 'relative', marginBottom: 16, textAlign:'center', justifyContent:'center', alignItems:'center' },
+  avatar: { position:'absolute', bottom:0, right:0 },
+  avatarIcon: { width: 29, height: 29 },
 
-  avatarWrapper: {
-    position: 'relative',
-    marginBottom: 16
-  },
+  name: { fontSize: 18, fontWeight: '600', color: '#000' },
+  email: { fontSize: 14, color: '#666', marginTop: 4 },
 
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFEA00', marginHorizontal: 24, borderRadius: 30, paddingVertical: 14, position: 'absolute', bottom: 40, left: 0, right: 0 },
+  logoutIcon: { width: 18, height: 18, marginRight: 8 },
+  logoutText: { fontSize: 16, fontWeight: '600', color: '#000' },
 
-  avatarIcon: {
-    width: 109.5,
-    height: 104,
-  },
+  // Modal
+  modalTitle: { fontSize: 24, fontWeight: '700', textAlign:'center', marginBottom: 20 },
+  inputWrapper: { marginBottom: 15 },
+  label: { fontSize: 14, fontWeight:'600', marginBottom: 5 },
+  input: { borderWidth: 1, borderColor:'#ccc', borderRadius: 8, paddingHorizontal: 10, height: 45 },
+  fieldIcon: { width: 20, height: 20, marginRight:5, },
+  iconText:{flexDirection:'row',display:'flex'},
 
-  editBadge: {
-    position: 'absolute',
-    right: 0,
-    bottom: 4,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FFEA00',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
+  saveBtn: { backgroundColor:'#FFEA00', borderRadius:30, paddingVertical:12, marginTop:10, alignItems:'center' },
+  saveText: { fontSize:16, fontWeight:'600', color:'#000' },
 
-  editText: {
-    fontSize: 14,
-    fontWeight: 'bold'
-  },
+  saveBtnCancel: { backgroundColor:'#000', borderRadius:30, paddingVertical:12, marginTop:10, alignItems:'center' },
+  saveTextCancel: { fontSize:16, fontWeight:'600', color:'#FFEA00' },
 
-  name: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000'
-  },
-
-  email: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4
-  },
-
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFEA00',
-    marginHorizontal: 24,
-    borderRadius: 30,
-    paddingVertical: 14,
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0
-  },
-
-  logoutIcon: {
-    width: 18,
-    height: 18,
-    marginRight: 8
-  },
-
-  logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000'
-  }
+  loadingContainer: { flex:1, justifyContent:'center', alignItems:'center', backgroundColor:'rgba(255, 255, 255, 0.78)' },
 });

@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { StyleSheet, Text, View, Image, TouchableOpacity, ImageBackground, StatusBar,
   Platform, Pressable, Linking } from 'react-native'
 import { useRoute } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const More = ({ navigation }) => {
 
@@ -12,24 +13,55 @@ const More = ({ navigation }) => {
     const route = useRoute();
     const currentRoute = route.name;  
 
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const getUser = async () => {
+        const data = await AsyncStorage.getItem('userData');
+        if (data) {
+            setUser(JSON.parse(data));
+        }
+        };
+        getUser();
+    }, []);
+
+    const getInitials = (firstName = '', lastName = '') => {
+        const f = firstName?.charAt(0)?.toUpperCase() || '';
+        const l = lastName?.charAt(0)?.toUpperCase() || '';
+        return `${f}${l}`;
+    };
+
   return (
     <ImageBackground style={styles.background} resizeMode="cover">
       <View style={styles.container}>
         <View style={styles.containerInner}>
             {/* HEADER */}
             <View style={styles.flexClass}>
-                <Pressable onPress={() => navigation.goBack()}>
-                <Image
+                <Pressable onPress={() => navigation.navigate('Profile')}>
+                    {/* <Image
                     source={require('../../images/right_arrow.png')}
                     style={styles.rightarrowIcon}
+                    /> */}
+    
+                    {user?.profileImage ? (
+                    <Image
+                        source={{ uri: user.profileImage }}
+                        style={styles.profileImage}
                     />
+                    ) : (
+                    <View style={styles.initialsAvatar}>
+                        <Text style={styles.initialsText}>
+                        {getInitials(user?.firstName, user?.lastName)}
+                        </Text>
+                    </View>
+                    )}
                 </Pressable>
-
+    
                 <Image
                     source={require('../../images/syil_logo_black.png')}
                     style={styles.logoSyil}
                 />
-
+    
                 <Pressable onPress={() => navigation.navigate('Ticket')}>
                     <Image
                     source={require('../../images/ticket.png')}
@@ -39,14 +71,6 @@ const More = ({ navigation }) => {
             </View>
 
             
-            {/* Profile */}
-            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('Profile')} >
-                <View style={styles.left}>
-                <Image source={require('../../images/ask.png')} style={styles.icon} />
-                <Text style={styles.text}>Profile</Text>
-                </View>
-                <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
-            </TouchableOpacity>
             
             {/* Ask Alex */}
             <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('AskAlex')} >
@@ -221,6 +245,8 @@ const styles = StyleSheet.create({
   rightarrowIcon: { width: 11.86, height: 21.21 },
   logoSyil: { width: 87.6, height: 24 },
   ticketIcon: { width: 26.88, height: 21.88 },
+  initialsAvatar:{width:30,height:30,backgroundColor:'#000',borderRadius:100,justifyContent:'center',alignItems:'center',},
+  initialsText:{fontSize:14,fontWeight:500,color:'#FFEA00'},
 
   Leftarrow: { width: 11.86, height: 21.21 },
   row: {
