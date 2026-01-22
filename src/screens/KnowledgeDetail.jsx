@@ -26,6 +26,8 @@ const KnowledgeDetail = ({ route, navigation }) => {
   const headingPositions = useRef([]);
 
   const [html, setHtml] = useState('');
+  const [toc, setToc] = useState([]);
+  const [showToc, setShowToc] = useState(false);
   const [imageVisible, setImageVisible] = useState(false);
   const [imageUrl, setImageUrl] = useState(null);
 
@@ -93,6 +95,21 @@ const KnowledgeDetail = ({ route, navigation }) => {
     rawHtml = rawHtml.replace(/<table/gi, '<div class="rn-table"><table');
     rawHtml = rawHtml.replace(/<\/table>/gi, '</table></div>');
 
+    const headings = [];
+    let index = 0;
+
+    rawHtml = rawHtml.replace(/<h3[^>]*>(.*?)<\/h3>/gi, (_, content) => {
+      headings.push({
+        index,
+        title: content.replace(/<[^>]+>/g, '').trim(),
+      });
+      index++;
+      return `<h3>${content}</h3>`;
+    });
+
+    setHtml(rawHtml);
+    setToc(headings);
+
     setHtml(rawHtml);
   }, [article]);
 
@@ -152,6 +169,16 @@ const KnowledgeDetail = ({ route, navigation }) => {
     []
   );
 
+  const formatDate = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(Number(timestamp));
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
@@ -167,8 +194,65 @@ const KnowledgeDetail = ({ route, navigation }) => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>{article?.['Article title']}</Text>
+        
+
+         {/* META */}
+        <View style={styles.metaContainer}>
+          <Text style={styles.title}>{article?.['Article title']}</Text>
+
+          {!!article?.Category && (
+            <Text style={styles.metaText}>
+              Category:{' '}
+              <Text style={styles.metaValue}>{article.Category}</Text>
+            </Text>
+          )}
+
+          {!!article?.Subcategory && (
+            <Text style={styles.metaText}>
+              Subcategory:{' '}
+              <Text style={styles.metaValue}>{article.Subcategory}</Text>
+            </Text>
+          )}
+
+          {!!article?.['Last modified date'] && (
+            <Text style={styles.metaText}>
+              Last Updated:{' '}
+              <Text style={styles.metaValue}>
+                {formatDate(article['Last modified date'])}
+              </Text>
+            </Text>
+          )}
+        </View>
+
+        {/* TOC */}
+        {toc.length > 0 && (
+          <View style={styles.tocWrapper}>
+            <Text style={styles.tocTitle}>Table of Contents</Text>
+
+            <TouchableOpacity
+              style={styles.tocDropdown}
+              onPress={() => setShowToc(!showToc)}
+            >
+              <Text style={styles.tocPlaceholder}>Select section</Text>
+              <Text>⌄</Text>
+            </TouchableOpacity>
+
+            {showToc &&
+              toc.map((item) => (
+                <TouchableOpacity
+                  key={item.index}
+                  style={styles.tocItem}
+                  onPress={() => scrollToSection(item.index)}
+                >
+                  <Text>{item.title}</Text>
+                </TouchableOpacity>
+              ))}
+          </View>
+        )}
+
+
         <View style={styles.categoryList}>
+
         <RenderHTML
           contentWidth={width}
           source={{ html }}
@@ -220,6 +304,49 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 80 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: 10 },
+  metaContainer: {
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 10,
+  },
+  metaText: {
+    fontSize: 14,
+    color: '#555',
+  },
+  metaValue: {
+    fontWeight: '600',
+    color: '#000',
+  },
+  tocWrapper: {
+    backgroundColor: '#ffe600',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    display:'none',
+  },
+  tocTitle: {
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  tocDropdown: {
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 6,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  tocPlaceholder: {
+    color: '#555',
+  },
+  tocItem: {
+    paddingVertical: 8,
+  },
 });
 
 const htmlStyles = {
