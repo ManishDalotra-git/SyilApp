@@ -357,4 +357,4 @@ const htmlStyles = {
   p: { marginVertical: 8, fontSize: 14 },
   h3: { fontSize: 18, fontWeight: '700', marginVertical: 12 },
   a: { color: '#1a73e8', textDecorationLine: 'underline' },
-};
+}  
