@@ -67,15 +67,29 @@ const handleSubmit = async () => {
         contactId: result.contactId,
       })
     );
-    console.log('result.user----- ', result.user);
 
-
+    
     await AsyncStorage.setItem('userID', result.contactId);
     await AsyncStorage.setItem('userFirstName', result.user.firstName);
     await AsyncStorage.setItem('userLastName', result.user.lastName);
     await AsyncStorage.setItem('userBio', result.user.bio);
     await AsyncStorage.setItem('userPhone', result.user.phone);
     await AsyncStorage.setItem('userGender', result.user.gender);
+
+    console.log('result.user----- ', result.user);
+
+      const userID = await AsyncStorage.getItem('userID');
+      const userFirstName = await AsyncStorage.getItem('userFirstName');
+      const userLastName = await AsyncStorage.getItem('userLastName');
+      const userBio = await AsyncStorage.getItem('userBio');
+      const userPhone = await AsyncStorage.getItem('userPhone');
+      const userGender = await AsyncStorage.getItem('userGender');
+      console.log('userID-- ', userID);
+      console.log('userFirstName-- ', userFirstName);
+      console.log('userLastName-- ', userLastName);
+      console.log('userBio-- ', userBio);
+      console.log('userPhone-- ', userPhone);
+      console.log('userGender-- ', userGender);
     
 
     setLoading(false);
