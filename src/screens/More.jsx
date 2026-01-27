@@ -12,6 +12,8 @@ const More = ({ navigation }) => {
 
     const route = useRoute();
     const currentRoute = route.name;  
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
 
     const [user, setUser] = useState(null);
 
@@ -23,6 +25,18 @@ const More = ({ navigation }) => {
         }
         };
         getUser();
+    }, []);
+
+    useEffect(() => {
+        const userData = async () => {
+        const userFirstName = await AsyncStorage.getItem('userFirstName');
+        const userLastName = await AsyncStorage.getItem('userLastName');
+        if (userFirstName) setFirstName(userFirstName);
+        if (userLastName) setLastName(userLastName);
+        console.log('userFirstName-- ', userFirstName);
+        console.log('userLastName-- ', userLastName);
+        };
+        userData();
     }, []);
 
     const getInitials = (firstName = '', lastName = '') => {
@@ -51,7 +65,7 @@ const More = ({ navigation }) => {
                     ) : (
                     <View style={styles.initialsAvatar}>
                         <Text style={styles.initialsText}>
-                        {getInitials(user?.firstName, user?.lastName)}
+                        {getInitials(firstName, lastName)}
                         </Text>
                     </View>
                     )}

@@ -19,6 +19,8 @@ const upload = multer({
 
 const HUBSPOT_API_KEY = process.env.HUBSPOT_API_KEY;
 console.log('api--- ', HUBSPOT_API_KEY);
+
+
 // Step 1: Search contact by email
 app.post('/get-contact-id', async (req, res) => {
   const { email } = req.body;
@@ -103,8 +105,6 @@ app.post('/get-contact-id', async (req, res) => {
 });
 
 
-
-
 // Step 2: Create ticket and associate with contact
 const uploadedFiles = [];
 app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
@@ -148,6 +148,7 @@ app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
     res.status(500).json({ error: 'File upload failed' });
   }
 });
+
 
 
 app.post('/create-ticket', async (req, res) => {
@@ -215,9 +216,6 @@ app.post('/create-ticket', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });  
   }
 });
-
- 
-
 
 
 // Step 3: check login details in hubspot
@@ -386,6 +384,7 @@ app.post('/forgot_password', async (req, res) => {
 });
 
 
+
 app.post('/submit-feedback', async (req, res) => {
   const { email, subject, message, rating } = req.body;
 
@@ -514,7 +513,6 @@ app.post('/update-profile', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 
 

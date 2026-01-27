@@ -15,6 +15,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getContactId, setContactId } from '../utils/hiddenFields';
 import { Picker } from '@react-native-picker/picker';
+import { Alert } from 'react-native';
 
 const Profile = ({ navigation }) => {
 
@@ -24,6 +25,13 @@ const Profile = ({ navigation }) => {
   const [user, setUser] = useState(null);
   const [editVisible, setEditVisible] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [userID, setUserID] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [bio, setBio] = useState('');
+  const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('');
+  const [email, setEmail] = useState('');
 
   const [form, setForm] = useState({
     firstName: '',
@@ -31,7 +39,6 @@ const Profile = ({ navigation }) => {
     bio: '',
     phone: '',
     gender: '',
-    image: '',
   });
 
   // 🔹 Load user
@@ -51,15 +58,41 @@ const Profile = ({ navigation }) => {
   useEffect(() => {
     if (user) {
       setForm({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        bio: user.bio || '',
-        phone: user.phone || '',
-        gender: user.gender || '',
-        image: user.profileImage || '',
+        firstName: firstName || '',
+        lastName: lastName || '',
+        bio: bio || '',
+        phone: phone || '',
+        gender: gender || '',
       });
     }
   }, [user]);
+
+  useEffect(() => {
+    const userData = async () => {
+      const userID = await AsyncStorage.getItem('userID');
+      const userFirstName = await AsyncStorage.getItem('userFirstName');
+      const userLastName = await AsyncStorage.getItem('userLastName');
+      const userBio = await AsyncStorage.getItem('userBio');
+      const userPhone = await AsyncStorage.getItem('userPhone');
+      const userGender = await AsyncStorage.getItem('userGender');
+      const savedEmail = await AsyncStorage.getItem('userEmail');
+      if (userID) setUserID(userID);
+      if (savedEmail) setEmail(savedEmail);
+      if (userFirstName) setFirstName(userFirstName);
+      if (userLastName) setLastName(userLastName);
+      if (userBio) setBio(userBio);
+      if (userPhone) setPhone(userPhone);
+      if (userGender) setGender(userGender);
+      console.log('userID-- ', userID);
+      console.log('savedEmail-- ', savedEmail);
+      console.log('userFirstName-- ', userFirstName);
+      console.log('userLastName-- ', userLastName);
+      console.log('userBio-- ', userBio);
+      console.log('userPhone-- ', userPhone);
+      console.log('userGender-- ', userGender);
+      };
+    userData();
+  }, []);
 
   const getInitials = (firstName = '', lastName = '') => {
     const f = firstName?.charAt(0)?.toUpperCase() || '';
@@ -82,12 +115,11 @@ const Profile = ({ navigation }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contactId,
-            firstName: form.firstName,
-            lastName: form.lastName,
-            bio: form.bio,
-            phone: form.phone,
-            gender: form.gender,
-            profileImage: form.image,
+            firstName: firstName,
+            lastName: lastName,
+            bio: bio,
+            phone: phone,
+            gender: gender,
           }),
         }
       );
@@ -113,6 +145,38 @@ const Profile = ({ navigation }) => {
     }
   };
 
+    const handleLogout = () => {
+  Alert.alert(
+    'Logout',
+    'Are you sure you want to logout?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        onPress: async () => {
+          await AsyncStorage.multiRemove([
+            'isLoggedIn',
+            'lastLoginTime',
+            'userEmail',
+            'userData',
+            'userID',
+            'userFirstName',
+            'userLastName',
+            'userBio',
+            'userPhone',
+            'userGender',
+          ]);
+          setContactId(null);
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+        },
+      },
+    ]
+  );
+};
+
   return (
     <View style={styles.container}>
 
@@ -132,7 +196,7 @@ const Profile = ({ navigation }) => {
         <View style={styles.avatarWrapper}>
           <View style={styles.initialsAvatar}>
             <Text style={styles.initialsText}>
-              {getInitials(user?.firstName, user?.lastName)}
+              {getInitials(firstName, lastName)}
             </Text>
           </View>
 
@@ -149,13 +213,13 @@ const Profile = ({ navigation }) => {
         </View>
 
         <Text style={styles.name}>
-          {user?.firstName} {user?.lastName}
+          {firstName} {lastName}
         </Text>
-        <Text style={styles.email}>{user?.email}</Text>
+        <Text style={styles.email}>{email}</Text>
       </View>
 
       {/* Logout Button (SAME) */}
-      <TouchableOpacity style={styles.logoutBtn}>
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Image
           source={require('../../images/logout.png')}
           style={styles.logoutIcon}
@@ -177,7 +241,7 @@ const Profile = ({ navigation }) => {
             <TextInput
               placeholder="First Name"
               style={styles.input}
-              value={form.firstName}
+              value={firstName}
               onChangeText={(v) => setForm({ ...form, firstName: v })}
             />
           </View>
@@ -191,7 +255,7 @@ const Profile = ({ navigation }) => {
             <TextInput
               placeholder="Last Name"
               style={styles.input}
-              value={form.lastName}
+              value={lastName}
               onChangeText={(v) => setForm({ ...form, lastName: v })}
             />
           </View>
@@ -205,7 +269,7 @@ const Profile = ({ navigation }) => {
             <TextInput
               placeholder="Bio"
               style={styles.input}
-              value={form.bio}
+              value={bio}
               onChangeText={(v) => setForm({ ...form, bio: v })}
             />
           </View>
@@ -219,7 +283,7 @@ const Profile = ({ navigation }) => {
             <TextInput
               placeholder="Phone"
               style={styles.input}
-              value={form.phone}
+              value={phone}
               onChangeText={(v) => setForm({ ...form, phone: v })}
             />
           </View>
@@ -233,7 +297,7 @@ const Profile = ({ navigation }) => {
             <TextInput
               placeholder="Gender"
               style={styles.input}
-              value={form.gender}
+              value={gender}
               onChangeText={(v) => setForm({ ...form, gender: v })}
             />
           </View>

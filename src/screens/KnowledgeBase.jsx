@@ -29,6 +29,8 @@ const KnowledgeBase = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
 
   const route = useRoute();
@@ -45,6 +47,18 @@ const KnowledgeBase = ({ navigation }) => {
       }
     };
     getUser();
+  }, []);
+
+  useEffect(() => {
+    const userData = async () => {
+      const userFirstName = await AsyncStorage.getItem('userFirstName');
+      const userLastName = await AsyncStorage.getItem('userLastName');
+      if (userFirstName) setFirstName(userFirstName);
+      if (userLastName) setLastName(userLastName);
+      console.log('userFirstName-- ', userFirstName);
+      console.log('userLastName-- ', userLastName);
+      };
+    userData();
   }, []);
 
 
@@ -171,7 +185,7 @@ const KnowledgeBase = ({ navigation }) => {
               ) : (
                 <View style={styles.initialsAvatar}>
                   <Text style={styles.initialsText}>
-                    {getInitials(user?.firstName, user?.lastName)}
+                    {getInitials(firstName, lastName)}
                   </Text>
                 </View>
               )}

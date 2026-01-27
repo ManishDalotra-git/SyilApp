@@ -69,8 +69,13 @@ const handleSubmit = async () => {
     );
     console.log('result.user----- ', result.user);
 
-    
 
+    await AsyncStorage.setItem('userID', result.contactId);
+    await AsyncStorage.setItem('userFirstName', result.user.firstName);
+    await AsyncStorage.setItem('userLastName', result.user.lastName);
+    await AsyncStorage.setItem('userBio', result.user.bio);
+    await AsyncStorage.setItem('userPhone', result.user.phone);
+    await AsyncStorage.setItem('userGender', result.user.gender);
     
 
     setLoading(false);
