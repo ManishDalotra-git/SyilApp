@@ -69,7 +69,7 @@ const Profile = ({ navigation }) => {
 
 
     useEffect(() => {
-  const getUser = async () => {
+    const getUser = async () => {
     const data = await AsyncStorage.getItem('userData');
     if (data) {
       const parsed = JSON.parse(data);
