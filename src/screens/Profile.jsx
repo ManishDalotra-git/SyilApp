@@ -42,17 +42,17 @@ const Profile = ({ navigation }) => {
   });
 
   // 🔹 Load user
-  useEffect(() => {
-    const getUser = async () => {
-      const data = await AsyncStorage.getItem('userData');
-      if (data) {
-        const parsed = JSON.parse(data);
-        setUser(parsed);
-        setContactId(parsed.contactId); // 🔒 hidden
-      }
-    };
-    getUser();
-  }, []);
+  // useEffect(() => {
+  //   const getUser = async () => {
+  //     const data = await AsyncStorage.getItem('userData');
+  //     if (data) {
+  //       const parsed = JSON.parse(data);
+  //       setUser(parsed);
+  //       setContactId(parsed.contactId); // 🔒 hidden
+  //     }
+  //   };
+  //   getUser();
+  // }, []);
 
   // 🔹 Fill form
   useEffect(() => {
@@ -67,32 +67,54 @@ const Profile = ({ navigation }) => {
     }
   }, [user]);
 
-  useEffect(() => {
-    const userData = async () => {
-      const userID = await AsyncStorage.getItem('userID');
-      const userFirstName = await AsyncStorage.getItem('userFirstName');
-      const userLastName = await AsyncStorage.getItem('userLastName');
-      const userBio = await AsyncStorage.getItem('userBio');
-      const userPhone = await AsyncStorage.getItem('userPhone');
-      const userGender = await AsyncStorage.getItem('userGender');
-      const savedEmail = await AsyncStorage.getItem('userEmail');
-      if (userID) setUserID(userID);
-      if (savedEmail) setEmail(savedEmail);
-      if (userFirstName) setFirstName(userFirstName);
-      if (userLastName) setLastName(userLastName);
-      if (userBio) setBio(userBio);
-      if (userPhone) setPhone(userPhone);
-      if (userGender) setGender(userGender);
-      console.log('userID-- ', userID);
-      console.log('savedEmail-- ', savedEmail);
-      console.log('userFirstName-- ', userFirstName);
-      console.log('userLastName-- ', userLastName);
-      console.log('userBio-- ', userBio);
-      console.log('userPhone-- ', userPhone);
-      console.log('userGender-- ', userGender);
-      };
-    userData();
+
+    useEffect(() => {
+  const getUser = async () => {
+    const data = await AsyncStorage.getItem('userData');
+    if (data) {
+      const parsed = JSON.parse(data);
+      setUser(parsed);
+
+      // 🔥 IMPORTANT
+      setFirstName(parsed.firstName || '');
+      setLastName(parsed.lastName || '');
+      setBio(parsed.bio || '');
+      setPhone(parsed.phone || '');
+      setGender(parsed.gender || '');
+      setEmail(parsed.email || '');
+
+      setContactId(parsed.contactId);
+    }
+  };
+  getUser();
   }, []);
+
+  // useEffect(() => {
+  //   const userData = async () => {
+  //     const userID = await AsyncStorage.getItem('userID');
+  //     const userFirstName = await AsyncStorage.getItem('userFirstName');
+  //     const userLastName = await AsyncStorage.getItem('userLastName');
+  //     const userBio = await AsyncStorage.getItem('userBio');
+  //     const userPhone = await AsyncStorage.getItem('userPhone');
+  //     const userGender = await AsyncStorage.getItem('userGender');
+  //     const savedEmail = await AsyncStorage.getItem('userEmail');
+  //     if (userID) setUserID(userID);
+  //     if (savedEmail) setEmail(savedEmail);
+  //     if (userFirstName) setFirstName(userFirstName);
+  //     if (userLastName) setLastName(userLastName);
+  //     if (userBio) setBio(userBio);
+  //     if (userPhone) setPhone(userPhone);
+  //     if (userGender) setGender(userGender);
+  //     console.log('userID-- ', userID);
+  //     console.log('savedEmail-- ', savedEmail);
+  //     console.log('userFirstName-- ', userFirstName);
+  //     console.log('userLastName-- ', userLastName);
+  //     console.log('userBio-- ', userBio);
+  //     console.log('userPhone-- ', userPhone);
+  //     console.log('userGender-- ', userGender);
+  //     };
+  //   userData();
+  // }, []);
 
   const getInitials = (firstName = '', lastName = '') => {
     const f = firstName?.charAt(0)?.toUpperCase() || '';
