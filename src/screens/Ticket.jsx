@@ -261,7 +261,7 @@ const formatCategoryLabel = (key) => {
       if (responseTicket.ok) {
         //alert('Ticket created successfully!');
         setLoading(false);
-        console.log('textTicket---- ' , textTicket.id)
+        console.log('textTicket---- ' , textTicket.mobile_ticket_id)
         Alert.alert(
           'Success',
           'Ticket created successfully!',
@@ -270,7 +270,7 @@ const formatCategoryLabel = (key) => {
               text: 'OK',
               onPress: () =>
                 navigation.navigate('ThankYou', {
-                  ticketId: textTicket.id,
+                  ticketId: textTicket.mobile_ticket_id,
                 }),
             },
           ],

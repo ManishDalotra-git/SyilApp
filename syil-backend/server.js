@@ -244,11 +244,57 @@ app.post('/create-ticket', async (req, res) => {
     uploadedFiles.length = 0;
     console.log(response);
     console.log('HubSpot STATUS:', response.status);
-    //console.log('HubSpot DATA:', JSON.stringify(response.data, null, 2));
+
+
+    const fetch = (...args) =>
+      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+    const searchResponse = await fetch(
+      'https://api.hubapi.com/crm/v3/objects/contacts/search',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+        },
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName: 'email',
+                  operator: 'EQ',
+                  value: email,
+                },
+              ],
+            },
+          ],
+          properties: ['mobile_ticket_id'],
+        }),
+      }
+    );
+
+    const searchData = await searchResponse.json();
+
+    const mobile_ticket_id =
+      searchData?.results?.[0]?.properties?.mobile_ticket_id || null;
+
+    /* ------------------ 3️⃣ FINAL RESPONSE ------------------ */
+
     return res.status(200).json({
       success: true,
-      message: `Ticket created successfully ${response}`,
+      message: 'Ticket created successfully',
+      contactId,
+      mobile_ticket_id,
     });
+    
+    // return res.status(200).json({
+    //   success: true,
+    //   message: `Ticket created successfully ${response}`,
+    // });
+
+    
+
 
   } catch (err) {
     console.error(
@@ -258,6 +304,7 @@ app.post('/create-ticket', async (req, res) => {
     return res.status(500).json({ error: 'Ticket creation failed' });
   }
 });
+
 
 
 // app.post('/create-ticket', async (req, res) => {
