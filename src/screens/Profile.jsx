@@ -67,6 +67,8 @@ const Profile = ({ navigation }) => {
     }
   }, [user]);
 
+
+
   useEffect(() => {
     const userData = async () => {
       const userID = await AsyncStorage.getItem('userID');
@@ -93,6 +95,7 @@ const Profile = ({ navigation }) => {
       };
     userData();
   }, []);
+
 
   const getInitials = (firstName = '', lastName = '') => {
     const f = firstName?.charAt(0)?.toUpperCase() || '';
@@ -145,7 +148,7 @@ const Profile = ({ navigation }) => {
     }
   };
 
-    const handleLogout = () => {
+  const handleLogout = () => {
   Alert.alert(
     'Logout',
     'Are you sure you want to logout?',
@@ -176,6 +179,7 @@ const Profile = ({ navigation }) => {
     ]
   );
 };
+
 
   return (
     <View style={styles.container}>
@@ -242,7 +246,8 @@ const Profile = ({ navigation }) => {
               placeholder="First Name"
               style={styles.input}
               value={firstName}
-              onChangeText={(v) => setForm({ ...form, firstName: v })}
+              onChangeText={(v) => setFirstName(v)}
+              //onChangeText={(v) => setForm({ ...form, firstName: v })}
             />
           </View>
 
@@ -256,7 +261,8 @@ const Profile = ({ navigation }) => {
               placeholder="Last Name"
               style={styles.input}
               value={lastName}
-              onChangeText={(v) => setForm({ ...form, lastName: v })}
+              onChangeText={(v) => setLastName(v)}
+              //onChangeText={(v) => setForm({ ...form, lastName: v })}
             />
           </View>
 
@@ -270,7 +276,8 @@ const Profile = ({ navigation }) => {
               placeholder="Bio"
               style={styles.input}
               value={bio}
-              onChangeText={(v) => setForm({ ...form, bio: v })}
+              onChangeText={(v) => setBio(v)}
+              //nChangeText={(v) => setForm({ ...form, bio: v })}
             />
           </View>
 
@@ -284,7 +291,8 @@ const Profile = ({ navigation }) => {
               placeholder="Phone"
               style={styles.input}
               value={phone}
-              onChangeText={(v) => setForm({ ...form, phone: v })}
+              onChangeText={(v) => setPhone(v)}
+              //onChangeText={(v) => setForm({ ...form, phone: v })}
             />
           </View>
 
@@ -298,7 +306,8 @@ const Profile = ({ navigation }) => {
               placeholder="Gender"
               style={styles.input}
               value={gender}
-              onChangeText={(v) => setForm({ ...form, gender: v })}
+              onChangeText={(v) => setGender(v)}
+              //onChangeText={(v) => setForm({ ...form, gender: v })}
             />
           </View>
 

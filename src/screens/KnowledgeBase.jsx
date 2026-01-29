@@ -177,18 +177,15 @@ const KnowledgeBase = ({ navigation }) => {
                 style={styles.rightarrowIcon}
               /> */}
 
-              {user?.profileImage ? (
-                <Image
-                  source={{ uri: user.profileImage }}
+                {/* <Image
+                  source={require('../../images/profile_icon.png')}
                   style={styles.profileImage}
-                />
-              ) : (
+                /> */}
                 <View style={styles.initialsAvatar}>
                   <Text style={styles.initialsText}>
                     {getInitials(firstName, lastName)}
                   </Text>
                 </View>
-              )}
             </Pressable>
 
             <Image
@@ -382,6 +379,7 @@ const styles = StyleSheet.create({
   ticketIcon: { width: 26.88, height: 21.88 },
   initialsAvatar:{width:30,height:30,backgroundColor:'#000',borderRadius:100,justifyContent:'center',alignItems:'center',},
   initialsText:{fontSize:14,fontWeight:500,color:'#FFEA00'},
+  profileImage:{width:30,height:30,},
 
 
   categoryRow: { marginTop: 15, height: 100 },

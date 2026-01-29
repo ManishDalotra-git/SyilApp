@@ -149,73 +149,182 @@ app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
   }
 });
 
-
-
+// 2️⃣ Create ticket via HubSpot form submission
 app.post('/create-ticket', async (req, res) => {
-  const { contactId, ticketData } = req.body;
-  if (!contactId) {
-    return res.status(400).json({ error: 'Contact ID is required' });
-  }
   try {
-    const fetch = (...args) =>
-      import('node-fetch').then(({ default: fetch }) => fetch(...args));
-      const properties = {
-        subject: ticketData.subject,
-        content: ticketData.description,
-        hs_pipeline: '94161297',
-        hs_pipeline_stage: '173580710',
-        hs_ticket_priority: ticketData.priority?.toUpperCase() || 'LOW',
-        end_customer_name: ticketData.company,
-        machine_type: ticketData.machineType,
-        controller: ticketData.controller,
-        machine_serial_number: ticketData.serialNo,
-        sales_order_number: ticketData.salesOrder,
-        warranty: ticketData.warranty,
-        hs_ticket_category: ticketData.categories?.join(';'),
-        hubspot_owner_id: '86106481',
-        hs_assigned_team_ids: '46557382',
-      };
+    const { contactId, ticketData } = req.body;
 
-      if ( uploadedFiles && uploadedFiles.length > 0 ) 
+    // 🔥 IMPORTANT: ticketData ke andar se values nikalo
+    if (!ticketData) {
+      return res.status(400).json({ error: 'ticketData missing' });
+    }
+
+    const {
+      email,
+      company,
+      machineType,
+      controller,
+      serialNo,
+      salesOrder,
+      subject,
+      description,
+      priority,
+      warranty,
+      categories,
+      files,
+    } = ticketData;
+
+    // 🟡 safety
+    const categoryArray = Array.isArray(categories) ? categories : [];
+
+    // ✅ HubSpot FORM FIELDS (value kabhi undefined nahi)
+    const fields = [
+      { objectTypeId: '0-1', name: 'email', value: email || '' },
+
+      { objectTypeId: '0-5', name: 'subject', value: subject || '' },
+      { objectTypeId: '0-5', name: 'content', value: description || '' },
+      { objectTypeId: '0-5', name: 'end_customer_name', value: company || '' },
+      { objectTypeId: '0-5', name: 'machine_type', value: machineType || '' },
+      { objectTypeId: '0-5', name: 'controller', value: controller || '' },
+      { objectTypeId: '0-5', name: 'machine_serial_number', value: serialNo || '' },
+      { objectTypeId: '0-5', name: 'sales_order_number', value: salesOrder || '' },
+      {
+        objectTypeId: '0-5',
+        name: 'warranty',
+        value: warranty ? 'true' : 'false',
+      },
+      {
+        objectTypeId: '0-5',
+        name: 'hs_ticket_priority',
+        value: priority || 'LOW',
+      },
+      {
+        objectTypeId: '0-5',
+        name: 'hs_ticket_category',
+        value: categoryArray.join(';') || '',
+      },
+      {
+        objectTypeId: '0-5',
+        name: 'source_status',
+        value: 'Mobile',
+      },
+    ];
+
+  
+
+    console.log('uploadedFiles----- ', uploadedFiles);
+
+    if ( uploadedFiles && uploadedFiles.length > 0 ) 
         {
           const fileIds = uploadedFiles.map(f => f.id);
-          properties.hs_file_upload = fileIds.join(';');
-          console.log('uploadedFiles--- ticket----- ', uploadedFiles);
+
+          fields.push({
+            objectTypeId: '0-5',
+            name: 'hs_file_upload', // HubSpot form file field name
+            value: fileIds.join(';'),
+          });
         }
 
-        console.log('properties----- ' , properties);
+    const formUrl = 'https://api.hsforms.com/submissions/v3/integration/submit/4392290/d3c790a4-c601-4a54-b826-0a5ca3f57428';
 
-      const response = await fetch(
-        'https://api.hubapi.com/crm/v3/objects/tickets',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${HUBSPOT_API_KEY}`,
-          },
-          body: JSON.stringify({
-            properties,
-            associations: [
-              {
-                to: { id: contactId },
-                types: [
-                  {
-                    associationCategory: 'HUBSPOT_DEFINED',
-                    associationTypeId: 16,
-                  },
-                ],
-              },
-            ],
-          }),
-        }
-      );
-    const data = await response.json();
-    res.status(response.ok ? 201 : response.status).json(data);
-  } catch (error) {
-    console.error('Create Ticket Error:', error);
-    res.status(500).json({ error: 'Internal server error' });  
+
+    console.log('fields---- ' , fields);
+
+    const response = await axios.post(
+      formUrl,
+      { fields },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+        },
+      }
+    );
+
+    uploadedFiles.length = 0;
+    console.log(response);
+    console.log('HubSpot STATUS:', response.status);
+    //console.log('HubSpot DATA:', JSON.stringify(response.data, null, 2));
+    return res.status(200).json({
+      success: true,
+      message: `Ticket created successfully ${response}`,
+    });
+
+  } catch (err) {
+    console.error(
+      '❌ Error in /create-ticket:',
+      err.response?.data || err.message
+    );
+    return res.status(500).json({ error: 'Ticket creation failed' });
   }
 });
+
+
+// app.post('/create-ticket', async (req, res) => {
+//   const { contactId, ticketData } = req.body;
+//   if (!contactId) {
+//     return res.status(400).json({ error: 'Contact ID is required' });
+//   }
+//   try {
+//     const fetch = (...args) =>
+//       import('node-fetch').then(({ default: fetch }) => fetch(...args));
+//       const properties = {
+//         subject: ticketData.subject,
+//         content: ticketData.description,
+//         hs_pipeline: '94161297',
+//         hs_pipeline_stage: '173580710',
+//         hs_ticket_priority: ticketData.priority?.toUpperCase() || 'LOW',
+//         end_customer_name: ticketData.company,
+//         machine_type: ticketData.machineType,
+//         controller: ticketData.controller,
+//         machine_serial_number: ticketData.serialNo,
+//         sales_order_number: ticketData.salesOrder,
+//         warranty: ticketData.warranty,
+//         hs_ticket_category: ticketData.categories?.join(';'),
+//         hubspot_owner_id: '86106481',
+//         hs_assigned_team_ids: '46557382',
+//       };
+
+//       if ( uploadedFiles && uploadedFiles.length > 0 ) 
+//         {
+//           const fileIds = uploadedFiles.map(f => f.id);
+//           properties.hs_file_upload = fileIds.join(';');
+//           console.log('uploadedFiles--- ticket----- ', uploadedFiles);
+//         }
+
+//         console.log('properties----- ' , properties);
+
+//       const response = await fetch(
+//         'https://api.hubapi.com/crm/v3/objects/tickets',
+//         {
+//           method: 'POST',
+//           headers: {
+//             'Content-Type': 'application/json',
+//             Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+//           },
+//           body: JSON.stringify({
+//             properties,
+//             associations: [
+//               {
+//                 to: { id: contactId },
+//                 types: [
+//                   {
+//                     associationCategory: 'HUBSPOT_DEFINED',
+//                     associationTypeId: 16,
+//                   },
+//                 ],
+//               },
+//             ],
+//           }),
+//         }
+//       );
+//     const data = await response.json();
+//     res.status(response.ok ? 201 : response.status).json(data);
+//   } catch (error) {
+//     console.error('Create Ticket Error:', error);
+//     res.status(500).json({ error: 'Internal server error' });  
+//   }
+// });
 
 
 // Step 3: check login details in hubspot
@@ -254,7 +363,7 @@ app.post('/check_login_detail', async (req, res) => {
               ],
             },
           ],
-          properties: ['email', 'mobile_password'],
+          properties: ['email', 'mobile_password', 'firstname', 'lastname', 'profile_image', 'bio', 'phone', 'gender'],
         }),
       }
     );
@@ -291,6 +400,15 @@ app.post('/check_login_detail', async (req, res) => {
     return res.status(200).json({
       message: 'Login successful',
       contactId: contactId,
+      user: {
+        email: contact.properties.email,
+        firstName: contact.properties.firstname || '',
+        lastName: contact.properties.lastname || '',
+        profileImage: contact.properties.hs_avatar_url || '',
+        bio: contact.properties.bio || '',
+        phone: contact.properties.phone || '',
+        gender: contact.properties.gender || '',
+      },
     });
 
   } catch (error) {
@@ -466,6 +584,83 @@ app.post('/submit-feedback', async (req, res) => {
   } catch (error) {
     console.error('Submit Feedback Error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+
+app.post('/get-profile-by-email', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({
+      message: 'Email is required',
+    });
+  }
+
+  try {
+    const fetch = (...args) =>
+      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+    const response = await fetch(
+      'https://api.hubapi.com/crm/v3/objects/contacts/search',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+        },
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName: 'email',
+                  operator: 'EQ',
+                  value: email,
+                },
+              ],
+            },
+          ],
+          properties: [
+            'email',
+            'firstname',
+            'lastname',
+            'bio',
+            'phone',
+            'gender',
+          ],
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!data.results || data.results.length === 0) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    const contact = data.results[0].properties;
+
+    // ✅ RESPONSE FOR PROFILE.JSX
+    res.status(200).json({
+      user: {
+        email: contact.email || '',
+        firstname: contact.firstname || '',
+        lastname: contact.lastname || '',
+        bio: contact.bio || '',
+        phone: contact.phone || '',
+        gender: contact.gender || '',
+      },
+    });
+
+  } catch (error) {
+    console.error('HubSpot API Error:', error);
+    res.status(500).json({
+      message: 'Internal server error',
+    });
   }
 });
 
