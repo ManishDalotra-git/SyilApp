@@ -136,6 +136,12 @@ const Profile = ({ navigation }) => {
 
       alert('Profile updated');
 
+      await AsyncStorage.setItem('userFirstName', String(result.user?.firstName ?? ''));
+      await AsyncStorage.setItem('userLastName', String(result.user?.lastName ?? ''));
+      await AsyncStorage.setItem('userBio', String(result.user?.bio ?? ''));
+      await AsyncStorage.setItem('userPhone', String(result.user?.phone ?? ''));
+      await AsyncStorage.setItem('userGender', String(result.user?.gender ?? ''));
+
       const updatedUser = { ...user, ...result.user };
       await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
       setUser(updatedUser);
