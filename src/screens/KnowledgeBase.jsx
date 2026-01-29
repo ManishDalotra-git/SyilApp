@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
 import articlesData from '../../assets/articles.json';
 import { useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 
 const KnowledgeBase = ({ navigation }) => {
@@ -37,30 +38,47 @@ const KnowledgeBase = ({ navigation }) => {
   const currentRoute = route.name;  
 
 
-  const [user, setUser] = useState(null);
+  // const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    const getUser = async () => {
-      const data = await AsyncStorage.getItem('userData');
-      if (data) {
-        setUser(JSON.parse(data));
-      }
-    };
-    getUser();
-  }, []);
+  // useEffect(() => {
+  //   const getUser = async () => {
+  //     const data = await AsyncStorage.getItem('userData');
+  //     if (data) {
+  //       setUser(JSON.parse(data));
+  //     }
+  //   };
+  //   getUser();
+  // }, []);
 
-  useEffect(() => {
-    const userData = async () => {
-      const userFirstName = await AsyncStorage.getItem('userFirstName');
-      const userLastName = await AsyncStorage.getItem('userLastName');
-      if (userFirstName) setFirstName(userFirstName);
-      if (userLastName) setLastName(userLastName);
-      console.log('userFirstName-- ', userFirstName);
-      console.log('userLastName-- ', userLastName);
-      };
-    userData();
-  }, []);
+  // useEffect(() => {
+  //   const userData = async () => {
+  //     const userFirstName = await AsyncStorage.getItem('userFirstName');
+  //     const userLastName = await AsyncStorage.getItem('userLastName');
+  //     if (userFirstName) setFirstName(userFirstName);
+  //     if (userLastName) setLastName(userLastName);
+  //     console.log('userFirstName-- ', userFirstName);
+  //     console.log('userLastName-- ', userLastName);
+  //     };
+  //   userData();
+  // }, []);
 
+
+  useFocusEffect(
+      useCallback(() => {
+          const loadUserName = async () => {
+          const userFirstName = await AsyncStorage.getItem('userFirstName');
+          const userLastName = await AsyncStorage.getItem('userLastName');
+
+          console.log('FOCUS firstName:', userFirstName);
+          console.log('FOCUS lastName:', userLastName);
+
+          setFirstName(userFirstName || '');
+          setLastName(userLastName || '');
+          };
+
+          loadUserName();
+      }, [])
+  );
 
 
 

@@ -16,7 +16,7 @@ const More = ({ navigation }) => {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
 
-    const [user, setUser] = useState(null);
+    //const [user, setUser] = useState(null);
 
     // useEffect(() => {
     //     const getUser = async () => {
