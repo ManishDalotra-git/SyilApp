@@ -758,5 +758,158 @@ app.post('/update-profile', async (req, res) => {
 
 
 
+//Get Ticket Details
+app.post('/get_contact_tickets', async (req, res) => {
+  const { contactId } = req.body;
+
+  console.log('contactId---- ', contactId);
+  if (!contactId) {
+    return res.status(400).json({
+      message: 'Contact ID is required',
+    });
+  }
+
+  try {
+    const fetch = (...args) =>
+      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+    // 1️⃣ GET TICKET ASSOCIATIONS
+    const associationResponse = await fetch(
+      `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}/associations/ticket`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const associationData = await associationResponse.json();
+
+    if (!associationData.results || associationData.results.length === 0) {
+      return res.status(200).json({
+        message: 'No tickets found',
+        tickets: [],
+      });
+    }
+
+    // 2️⃣ EXTRACT TICKET IDS
+    const ticketIds = associationData.results.map(item => item.id);
+
+    // 3️⃣ FETCH EACH TICKET DETAIL
+    const ticketPromises = ticketIds.map(ticketId =>
+      fetch(
+        `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      ).then(res => res.json())
+    );
+
+    const ticketResponses = await Promise.all(ticketPromises);
+
+    // 4️⃣ FORMAT RESPONSE (UI FRIENDLY)
+    const formattedTickets = ticketResponses.map(ticket => ({
+      ticketId: ticket.id,
+      subject: ticket.properties.subject || '',
+      createdDate: ticket.properties.createdate || '',
+      ownerId: ticket.properties.hubspot_owner_id || '',
+      status: ticket.properties.hs_pipeline_stage || '',
+    }));
+
+    return res.status(200).json({
+      message: 'Tickets fetched successfully',
+      tickets: formattedTickets,
+    });
+
+  } catch (error) {
+    console.error('Ticket Fetch Error:', error);
+    return res.status(500).json({
+      message: 'Internal server error',
+    });
+  }
+});
+
+
+//Get Conversation Details
+app.post('/get_ticket_conversation', async (req, res) => {
+  const { ticketId } = req.body;
+
+  if (!ticketId) {
+    return res.status(400).json({ message: 'Ticket ID is required' });
+  }
+
+  try {
+    const fetch = (...args) =>
+      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+    // 1️⃣ GET THREAD ID FROM TICKET
+    const ticketRes = await fetch(
+      `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=hs_conversations_originating_thread_id`,
+      {
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+        },
+      }
+    );
+
+    const ticketData = await ticketRes.json();
+    const threadId =
+      ticketData?.properties?.hs_conversations_originating_thread_id;
+
+      console.log('threadId--- ' , threadId);
+    if (!threadId) {
+      return res.status(200).json({
+        messages: [],
+      });
+    }
+
+    // 2️⃣ GET THREAD MESSAGES
+    const msgRes = await fetch(
+      `https://api.hubapi.com/conversations/v3/conversations/threads/${threadId}/messages`,
+      {
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+        },
+      }
+    );
+
+    const msgData = await msgRes.json();
+
+    // 3️⃣ FORMAT MESSAGES
+    const formattedMessages = msgData.results
+      .filter(m => m.type === 'MESSAGE')
+      .map(m => {
+        const sender = m.senders?.[0] || {};
+        const email = sender?.deliveryIdentifier?.value || '';
+        const name = sender?.name || email;
+
+        return {
+          id: m.id,
+          direction: m.direction, // INCOMING / OUTGOING
+          senderName: name,
+          text: m.text || '',
+          richText: m.richText || '',
+          createdAt: m.createdAt,
+        };
+      });
+
+    return res.status(200).json({
+      messages: formattedMessages,
+    });
+
+  } catch (err) {
+    console.error('Conversation error', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
 // app.listen(PORT,'0.0.0.0', () => console.log(`Server running on http://localhost:${PORT}`));

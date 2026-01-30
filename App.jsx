@@ -13,6 +13,8 @@ import KnowledgeDetail from './src/screens/KnowledgeDetail';
 import More from './src/screens/More';
 import Feedback from './src/screens/Feedback';
 import AskAlex from './src/screens/AskAlex';
+import ViewTicket from './src/screens/ViewTicket';
+import ViewTicketDetail from './src/screens/ViewTicketDetail';
 
 import { NavigationContainer } from '@react-navigation/native';
 
@@ -34,6 +36,8 @@ const App = () => {
         <Stack.Screen name="More" component={More} options={{ headerShown: false }} />
         <Stack.Screen name="Feedback" component={Feedback} options={{ headerShown: false }} />
         <Stack.Screen name="AskAlex" component={AskAlex} options={{ headerShown: false }} />
+        <Stack.Screen name="ViewTicket" component={ViewTicket} options={{ headerShown: false }} />
+        <Stack.Screen name="ViewTicketDetail" component={ViewTicketDetail} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   )

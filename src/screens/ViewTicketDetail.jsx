@@ -1,0 +1,305 @@
+import React, { useState, useCallback } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  TouchableOpacity,
+  ImageBackground,
+  StatusBar,
+  Platform,
+  Pressable,
+  FlatList,
+} from 'react-native';
+import { useRoute } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+
+const ViewTicketDetail = ({ navigation }) => {
+  StatusBar.setTranslucent(true);
+  StatusBar.setBackgroundColor('transparent');
+  StatusBar.setBarStyle('dark-content');
+
+  const route = useRoute();
+  const { ticketId } = route.params || {};
+  const { subject } = route.params || {};
+  const currentRoute = route.name;
+
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [contactID, setContactID] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+
+  /* ================= USER INFO ================= */
+  useFocusEffect(
+    useCallback(() => {
+      const loadUserName = async () => {
+        const userFirstName = await AsyncStorage.getItem('userFirstName');
+        const userLastName = await AsyncStorage.getItem('userLastName');
+        const userContactID = await AsyncStorage.getItem('userID');
+        const savedEmail = await AsyncStorage.getItem('userEmail');
+        setEmail(savedEmail || '');
+        setFirstName(userFirstName || '');
+        setLastName(userLastName || '');
+        setContactID(userContactID || '');
+      };
+      loadUserName();
+    }, [])
+  );
+
+  /* ================= CONVERSATION ================= */
+  useFocusEffect(
+    useCallback(() => {
+      const fetchTicketConversation = async () => {
+        if (!ticketId) return;
+
+        try {
+          setLoading(true);
+
+          const response = await fetch(
+            'https://syilapp.onrender.com/get_ticket_conversation',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ticketId }),
+            }
+          );
+
+          const data = await response.json();
+
+          // Messages ko latest top par show karne ke liye inverted FlatList ka use hoga
+          setMessages(data.messages || []);
+          setLoading(false);
+        } catch (error) {
+          console.log('Conversation fetch error', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchTicketConversation();
+    }, [ticketId])
+  );
+
+  const getSenderName = (item) => item?.senderName || email;
+
+  const getInitials = (firstName = '', lastName = '') => {
+    const f = firstName?.charAt(0)?.toUpperCase() || '';
+    const l = lastName?.charAt(0)?.toUpperCase() || '';
+    return `${f}${l}`;
+  };
+
+  return (
+    <ImageBackground style={styles.background} resizeMode="cover">
+      <View style={styles.container}>
+        {/* HEADER */}
+        <View style={styles.flexClass}>
+          <Pressable onPress={() => navigation.navigate('Profile')}>
+            <View style={styles.initialsAvatar}>
+              <Text style={styles.initialsText}>
+                {getInitials(firstName, lastName)}
+              </Text>
+            </View>
+          </Pressable>
+
+          <Image
+            source={require('../../images/syil_logo_black.png')}
+            style={styles.logoSyil}
+          />
+
+          <Pressable onPress={() => navigation.navigate('Ticket')}>
+            <Image
+              source={require('../../images/ticket.png')}
+              style={styles.ticketIcon}
+            />
+          </Pressable>
+        </View>
+
+        {/* MESSAGES */}
+        <View style={{ flex: 1 }}>
+          {loading && <Text style={{ textAlign:'center' , padding:10, }}>Loading conversation...</Text>}
+          <Text style={styles.subject}>{subject}</Text>
+          <Text style={styles.ticket}>#{ticketId}</Text>
+          <FlatList
+            data={messages}
+            inverted
+            keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 0, paddingTop:0,justifyContent:'flex-end', alignItems:'flex-end', flex:1, }}
+            // style={{ flex: 1, backgroundColor:'red',  }}
+            renderItem={({ item }) => (
+              <View
+                style={[
+                  styles.messageBubble,
+                  item.direction === 'OUTGOING'
+                    ? styles.outgoing
+                    : styles.incoming,
+                ]}
+              >
+                <Text style={styles.senderName}>
+                  {getSenderName(item)}
+                </Text>
+                <Text style={styles.messageText}>{item.text || ''}</Text>
+              </View>
+            )}
+          />
+
+          {!loading && messages.length === 0 && (
+            <Text style={styles.noTicketText}>No conversation found</Text>
+          )}
+        </View>
+      </View>
+
+      {/* FOOTER */}
+      <View style={styles.footer}>
+        {/** Home */}
+        <TouchableOpacity
+          style={[styles.footerItem, currentRoute === 'Home' && styles.activeFooterItem]}
+          onPress={() => navigation.navigate('Home')}
+        >
+          <Image
+            source={require('../../images/home.png')}
+            style={[styles.footerIcon, currentRoute === 'Home' && styles.activeFooterIcon]}
+          />
+          <Text style={[styles.footerText, currentRoute === 'Home' && styles.activeFooterText]}>
+            Home
+          </Text>
+        </TouchableOpacity>
+
+        {/** KnowledgeBase */}
+        <TouchableOpacity
+          style={[styles.footerItem, currentRoute === 'KnowledgeBase' && styles.activeFooterItem]}
+          onPress={() => navigation.navigate('KnowledgeBase')}
+        >
+          <Image
+            source={require('../../images/knowledge.png')}
+            style={[styles.footerIcon, currentRoute === 'KnowledgeBase' && styles.activeFooterIcon]}
+          />
+          <Text style={[styles.footerText, currentRoute === 'KnowledgeBase' && styles.activeFooterText]}>
+            Knowledge
+          </Text>
+        </TouchableOpacity>
+
+        {/** Submit Ticket */}
+        <TouchableOpacity
+          style={[styles.footerItem, currentRoute === 'Ticket' && styles.activeFooterItem]}
+          onPress={() => navigation.navigate('Ticket')}
+        >
+          <Image
+            source={require('../../images/submit.png')}
+            style={[styles.footerIcon, currentRoute === 'Ticket' && styles.activeFooterIcon]}
+          />
+          <Text style={[styles.footerText, currentRoute === 'Ticket' && styles.activeFooterText]}>
+            Submit Ticket
+          </Text>
+        </TouchableOpacity>
+
+        {/** View Tickets */}
+        <TouchableOpacity
+          style={[styles.footerItem, currentRoute === 'ViewTicket' && styles.activeFooterItem]}
+          onPress={() => navigation.navigate('ViewTicket')}
+        >
+          <Image
+            source={require('../../images/view.png')}
+            style={[styles.footerIcon, currentRoute === 'ViewTicket' && styles.activeFooterIcon]}
+          />
+          <Text style={[styles.footerText, currentRoute === 'ViewTicket' && styles.activeFooterText]}>
+            View Tickets
+          </Text>
+        </TouchableOpacity>
+
+        {/** More */}
+        <TouchableOpacity
+          style={[styles.footerItem, currentRoute === 'More' && styles.activeFooterItem]}
+          onPress={() => navigation.navigate('More')}
+        >
+          <Image
+            source={require('../../images/more.png')}
+            style={[styles.footerIcon, currentRoute === 'More' && styles.activeFooterIcon]}
+          />
+          <Text style={[styles.footerText, currentRoute === 'More' && styles.activeFooterText]}>
+            More
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ImageBackground>
+  );
+};
+
+export default ViewTicketDetail;
+
+const styles = StyleSheet.create({
+  background: { flex: 1 },
+  container: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? 60 : 20,
+    backgroundColor: '#fff',
+  },
+  flexClass: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 26,
+  },
+  logoSyil: { width: 87.6, height: 24 },
+  ticketIcon: { width: 26.88, height: 21.88 },
+  initialsAvatar: {
+    width: 30,
+    height: 30,
+    backgroundColor: '#000',
+    borderRadius: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initialsText: { fontSize: 14, fontWeight: '500', color: '#FFEA00' },
+
+  messageBubble: {
+    padding: 10,
+    marginVertical: 4,
+    borderRadius: 8,
+  },
+  incoming: {
+    backgroundColor: '#e5e5e5',
+    alignSelf: 'flex-start',
+  },
+  outgoing: {
+    backgroundColor: '#4CAF50',
+    alignSelf: 'flex-end',
+  },
+  senderName: { fontWeight: '600', marginBottom: 4, color: '#333' },
+  messageText: { color: '#000' },
+  noTicketText: { textAlign: 'center', marginTop: 20, color: '#999' },
+
+  subject:{fontSize:24,fontWeight:700,marginBottom:2,},
+  ticket:{fontSize:14,fontWeight:400,marginBottom:10,},
+
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  footerItem: { alignItems: 'center', justifyContent: 'center', paddingVertical: 5 },
+  footerIcon: { width: 22, height: 22, marginBottom: 4, tintColor: '#666666' },
+  footerText: { fontSize: 12, color: '#666666' },
+  activeFooterItem: { borderTopWidth: 2, borderTopColor: '#FFEA00' },
+  activeFooterIcon: { tintColor: '#000' },
+  activeFooterText: { color: '#000', fontWeight: '500' },
+});
