@@ -37,7 +37,7 @@ const Home = () => {
         </View>
       </Pressable>
 
-      <Pressable onPress={() => navigation.navigate('UploadArticles')} style={styles.card}>
+      <Pressable onPress={() => navigation.navigate('Ticket')} style={styles.card}>
         <View style={styles.cardFlex}>
           <Image style={styles.cardImage} source={require('../../images/Contact_support.png')} /> 
           <Image style={styles.arrow} source={require('../../images/arrow.png')} /> 
