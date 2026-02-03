@@ -285,8 +285,10 @@ const ViewTicket = ({ navigation }) => {
                 {/* TICKET LIST */}
                 <FlatList
                     data={tickets}
-                    keyExtractor={(item) => item.ticketId}
                     showsVerticalScrollIndicator={false}
+                    keyExtractor={(item) => item.ticketId}
+                    //contentContainerStyle={{ paddingBottom: 200, }}
+                    ListFooterComponent={<View style={{ height: 290 }} />}
                     renderItem={({ item }) => (
                     <Pressable
                         onPress={() =>
@@ -311,12 +313,20 @@ const ViewTicket = ({ navigation }) => {
                             </Text>
                         </View>
                     </Pressable>
+
                     )}
                 />
 
                 {!loading && tickets.length === 0 && (
                     <Text style={styles.noTicketText}>No tickets found</Text>
                 )}
+
+
+                
+
+
+
+
                 </View>
         </View>
     </View>

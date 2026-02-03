@@ -119,15 +119,18 @@ const ViewTicketDetail = ({ navigation }) => {
 
         {/* MESSAGES */}
         <View style={{ flex: 1 }}>
-          {loading && <Text style={{ textAlign:'center' , padding:10, }}>Loading conversation...</Text>}
+          
           <Text style={styles.subject}>{subject}</Text>
           <Text style={styles.ticket}>#{ticketId}</Text>
+
+          {loading && <Text style={{ textAlign:'center' , padding:10, }}>Loading conversation...</Text>}
+
           <FlatList
             data={messages}
-            inverted
-            keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 0, paddingTop:0,justifyContent:'flex-end', alignItems:'flex-end', flex:1, }}
+            keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+            style={{ flex: 1,paddingBottom:0, }}
+            contentContainerStyle={{ paddingBottom: 100, paddingTop:0,justifyContent:'flex-start',  flexDirection:'column-reverse',alignContent:'flex-end' }}
             // style={{ flex: 1, backgroundColor:'red',  }}
             renderItem={({ item }) => (
               <View
@@ -145,6 +148,7 @@ const ViewTicketDetail = ({ navigation }) => {
               </View>
             )}
           />
+          
 
           {!loading && messages.length === 0 && (
             <Text style={styles.noTicketText}>No conversation found</Text>
@@ -266,7 +270,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   outgoing: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#FFEA00',
     alignSelf: 'flex-end',
   },
   senderName: { fontWeight: '600', marginBottom: 4, color: '#333' },
