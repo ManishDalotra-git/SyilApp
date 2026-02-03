@@ -248,6 +248,7 @@ const AskAlex = () => {
         <TextInput
           placeholder="Type your message..."
           value={input}
+          placeholderTextColor="#999"
           onChangeText={setInput}
           style={styles.input}
         />
@@ -359,7 +360,7 @@ const styles = StyleSheet.create({
     safeArea: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingBottom:110,
+    paddingBottom:100,
   },
   header: {
     height: 45,
