@@ -15,6 +15,7 @@ import Feedback from './src/screens/Feedback';
 import AskAlex from './src/screens/AskAlex';
 import ViewTicket from './src/screens/ViewTicket';
 import ViewTicketDetail from './src/screens/ViewTicketDetail';
+import UploadArticles from './src/screens/UploadArticles';
 
 import { NavigationContainer } from '@react-navigation/native';
 
@@ -38,6 +39,7 @@ const App = () => {
         <Stack.Screen name="AskAlex" component={AskAlex} options={{ headerShown: false }} />
         <Stack.Screen name="ViewTicket" component={ViewTicket} options={{ headerShown: false }} />
         <Stack.Screen name="ViewTicketDetail" component={ViewTicketDetail} options={{ headerShown: false }} />
+        <Stack.Screen name="UploadArticles" component={UploadArticles} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   )
