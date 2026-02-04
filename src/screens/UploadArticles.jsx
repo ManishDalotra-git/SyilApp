@@ -6,6 +6,8 @@ import {
   StyleSheet,
   Alert,
   Image,
+  StatusBar,
+  Platform,
 } from 'react-native';
 
 import * as DocumentPicker from '@react-native-documents/picker';
@@ -15,6 +17,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const UploadArticle = ({ navigation }) => {
   const [jsonContent, setJsonContent] = useState(null);
   const [fileName, setFileName] = useState('');
+  StatusBar.setTranslucent(true);
+  StatusBar.setBackgroundColor('transparent');
+  StatusBar.setBarStyle('dark-content');
 
 
   const API_URL = 'http://192.168.0.37:3000/upload-articles';
@@ -167,6 +172,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
+    paddingTop: Platform.OS === 'android' ? 60 : 20,
   },
 
 
