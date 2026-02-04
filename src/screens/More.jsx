@@ -16,7 +16,7 @@ const More = ({ navigation }) => {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
 
-    //const [user, setUser] = useState(null);
+    // const [user, setUser] = useState(null);
 
     // useEffect(() => {
     //     const getUser = async () => {
@@ -39,6 +39,7 @@ const More = ({ navigation }) => {
     //     };
     //     userData();
     // }, []);
+
 
     useFocusEffect(
         useCallback(() => {
@@ -75,18 +76,15 @@ const More = ({ navigation }) => {
                     style={styles.rightarrowIcon}
                     /> */}
     
-                    
                     {/* <Image
                         source={require('../../images/profile_icon.png')}
                         style={styles.profileImage}
                     /> */}
-                
                     <View style={styles.initialsAvatar}>
                         <Text style={styles.initialsText}>
                         {getInitials(firstName, lastName)}
                         </Text>
                     </View>
-                    
                 </Pressable>
     
                 <Image
@@ -104,6 +102,15 @@ const More = ({ navigation }) => {
 
             
             
+            {/* Ask Alex */}
+            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('UploadArticles')} >
+                <View style={styles.left}>
+                <Image source={require('../../images/ArticleIcon.png')} style={styles.icon} />
+                <Text style={styles.text}>Add New Article</Text>
+                </View>
+                <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
+            </TouchableOpacity>
+
             {/* Ask Alex */}
             <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('AskAlex')} >
                 <View style={styles.left}>

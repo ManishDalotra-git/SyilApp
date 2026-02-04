@@ -2,9 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 
+const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
 app.use(bodyParser.json());
 
@@ -13,12 +14,97 @@ const FormData = require('form-data');
 const fs = require('fs');
 
 const multer = require('multer');
-const upload = multer({
+const hubspotUpload = multer({
   dest: 'uploads/'
 });
 
 const HUBSPOT_API_KEY = process.env.HUBSPOT_API_KEY;
 console.log('api--- ', HUBSPOT_API_KEY);
+
+
+
+
+
+
+
+
+app.get('/articles', (req, res) => {
+  const filePath = path.join(__dirname, 'assets', 'articles.json');
+
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      return res.status(500).json({ message: 'Failed to read articles' });
+    }
+
+    try {
+      const json = JSON.parse(data);
+      res.json(json);
+    } catch (e) {
+      res.status(500).json({ message: 'Invalid JSON format' });
+    }
+  });
+});
+
+
+
+
+
+
+
+
+
+// storage config for multer
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // temporary folder
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    if (file.mimetype !== 'application/json') {
+      return cb(new Error('Only JSON files are allowed'));
+    }
+    cb(null, true);
+  }
+});
+
+// endpoint to upload JSON
+app.post('/upload-articles', upload.single('file'), (req, res) => {
+  const tempPath = req.file.path;
+  const targetPath = path.join(__dirname, 'assets', 'articles.json');
+
+  fs.readFile(tempPath, 'utf8', (err, data) => {
+    if (err) return res.status(500).json({ message: 'Error reading file' });
+
+    // optional: validate JSON
+    try {
+      JSON.parse(data);
+    } catch (e) {
+      return res.status(400).json({ message: 'Invalid JSON file' });
+    }
+
+    fs.writeFile(targetPath, data, 'utf8', (err) => {
+      if (err) return res.status(500).json({ message: 'Error saving file' });
+
+      // delete temp file
+      fs.unlinkSync(tempPath);
+
+      res.json({ message: 'articles.json updated successfully' });
+    });
+  });
+});
+
+
+
+
+
+
+
 
 
 // Step 1: Search contact by email
@@ -105,9 +191,11 @@ app.post('/get-contact-id', async (req, res) => {
 });
 
 
+
+
 // Step 2: Create ticket and associate with contact
 const uploadedFiles = [];
-app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
+app.post('/upload-to-hubspot', hubspotUpload.array('files'), async (req, res) => {
   try {
     const files = req.files;
     if (!files || files.length === 0) {
@@ -306,7 +394,6 @@ app.post('/create-ticket', async (req, res) => {
 });
 
 
-
 // app.post('/create-ticket', async (req, res) => {
 //   const { contactId, ticketData } = req.body;
 //   if (!contactId) {
@@ -372,6 +459,119 @@ app.post('/create-ticket', async (req, res) => {
 //     res.status(500).json({ error: 'Internal server error' });  
 //   }
 // });
+
+
+
+
+// app.post('/upload-to-hubspot', upload.array('files'), async (req, res) => {
+//   try {
+//     const uploadedFiles = [];
+
+//     if (req.files && req.files.length > 0) {
+//       for (const file of req.files) {
+//         const formData = new FormData();
+//         formData.append('file', fs.createReadStream(file.path));
+//         formData.append('fileName', file.originalname);
+//         formData.append('folderId', '204201997753'); // Change to your folder ID
+//         formData.append('options', JSON.stringify({ access: 'PUBLIC_INDEXABLE' }));
+
+//         const response = await axios.post(
+//           'https://api.hubapi.com/files/v3/files',
+//           formData,
+//           { headers: { Authorization: `Bearer ${HUBSPOT_API_KEY}`, ...formData.getHeaders() } }
+//         );
+
+//         uploadedFiles.push({ id: response.data.id, url: response.data.url });
+
+//         fs.unlinkSync(file.path);
+//       }
+//     }
+
+//     res.status(200).json({ files: uploadedFiles });
+//   } catch (err) {
+//     console.error(err.response?.data || err.message || err);
+//     res.status(500).json({ error: 'File upload failed' });
+//   }
+// });
+
+
+
+
+
+
+
+
+
+// app.post('/create-ticket', async (req, res) => {
+//   const { contactId, ticketData } = req.body;
+//   console.log('ticketData--- ', ticketData);
+//   if (!contactId || !ticketData?.subject) {
+//     return res.status(400).json({
+//       error: 'Contact ID and subject are required',
+//     });
+//   }
+
+//   try {
+//     const fetch = (...args) =>
+//       import('node-fetch').then(({ default: fetch }) => fetch(...args));
+
+//     // 🔹 HubSpot Form Submission API
+//     const response = await fetch(
+//       'https://api.hsforms.com/submissions/v3/integration/submit/4392290/d3c790a4-c601-4a54-b826-0a5ca3f57428',
+//       {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({
+//           fields: [
+//             { name: 'subject', value: ticketData.subject },
+//             { name: 'content', value: ticketData.description },
+//             { name: 'hs_ticket_priority', value: ticketData.priority },
+//             { name: 'company', value: ticketData.company },
+//             { name: 'machine_type', value: ticketData.machineType },
+//             { name: 'controller', value: ticketData.controller },
+//             { name: 'machine_serial_number', value: ticketData.serialNo },
+//             { name: 'sales_order_number', value: ticketData.salesOrder },
+//             { name: 'warranty', value: ticketData.warranty },
+//             { name: 'email', value: ticketData.email },
+//             {
+//               name: 'hs_ticket_category',
+//               value: ticketData.categories?.join(';'),
+//             },
+//           ],
+//         }),
+//       }
+//     );
+
+//     const data = await response.json();
+
+//     if (!response.ok) {
+//       console.error('Form submission failed:', data);
+//       return res.status(500).json({
+//         error: 'Ticket submission failed',
+//         data,
+//       });
+//     }
+
+//     // ✅ SAME response variable name
+//     return res.status(201).json({
+//       success: true,
+//       message: 'Ticket created successfully',
+//       data,
+//     });
+
+//   } catch (error) {
+//     console.error('Create Ticket Error:', error);
+//     return res.status(500).json({
+//       error: 'Internal server error',
+//     });
+//   }
+// });
+
+
+ 
+
 
 
 // Step 3: check login details in hubspot
@@ -547,6 +747,7 @@ app.post('/forgot_password', async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 
 
@@ -755,7 +956,6 @@ app.post('/update-profile', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 
 
 //Get Ticket Details

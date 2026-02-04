@@ -19,7 +19,7 @@ import articlesData from '../../assets/articles.json';
 import { useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-
+import RNFS from 'react-native-fs';
 
 const KnowledgeBase = ({ navigation }) => {
   StatusBar.setTranslucent(true);
@@ -36,31 +36,6 @@ const KnowledgeBase = ({ navigation }) => {
 
   const route = useRoute();
   const currentRoute = route.name;  
-
-
-  // const [user, setUser] = useState(null);
-
-  // useEffect(() => {
-  //   const getUser = async () => {
-  //     const data = await AsyncStorage.getItem('userData');
-  //     if (data) {
-  //       setUser(JSON.parse(data));
-  //     }
-  //   };
-  //   getUser();
-  // }, []);
-
-  // useEffect(() => {
-  //   const userData = async () => {
-  //     const userFirstName = await AsyncStorage.getItem('userFirstName');
-  //     const userLastName = await AsyncStorage.getItem('userLastName');
-  //     if (userFirstName) setFirstName(userFirstName);
-  //     if (userLastName) setLastName(userLastName);
-  //     console.log('userFirstName-- ', userFirstName);
-  //     console.log('userLastName-- ', userLastName);
-  //     };
-  //   userData();
-  // }, []);
 
 
   useFocusEffect(
@@ -83,14 +58,86 @@ const KnowledgeBase = ({ navigation }) => {
 
 
   // ✅ Load data from JSON instead of CSV
-  useEffect(() => {
-    const cleanData = articlesData.filter(
-      item => item['Article title'] && item['Article body']
-    );
+  // useEffect(() => {
+  //   const cleanData = articlesData.filter(
+  //     item => item['Article title'] && item['Article body']
+  //   );
 
-    setArticles(cleanData);
-    setLoading(false);
-  }, []);
+  //   setArticles(cleanData);
+  //   setLoading(false);
+  // }, []);
+
+
+
+
+  
+// useEffect(() => {
+//   const loadArticles = async () => {
+//     try {
+//       const filePath = `${RNFS.DocumentDirectoryPath}/articles.json`;
+
+//       // Check if file exists
+//       const exists = await RNFS.exists(filePath);
+//       let rawData = null;
+
+//       if (exists) {
+//         const content = await RNFS.readFile(filePath, 'utf8');
+//         rawData = JSON.parse(content);
+//       } else {
+//         // fallback to bundled JSON import
+//         rawData = articlesData;
+//       }
+
+//       const cleanData = rawData.filter(
+//         item => item['Article title'] && item['Article body']
+//       );
+
+//       setArticles(cleanData);
+//       setLoading(false);
+//     } catch (error) {
+//       console.error('Failed to load articles:', error);
+//       // fallback to bundled JSON import on error
+//       const cleanData = articlesData.filter(
+//         item => item['Article title'] && item['Article body']
+//       );
+//       setArticles(cleanData);
+//       setLoading(false);
+//     }
+//   };
+
+//   loadArticles();
+// }, []);
+
+useEffect(() => {
+  const fetchArticles = async () => {
+    try {
+      const response = await fetch(
+        'http://192.168.0.37:3000/articles'
+      );
+      const data = await response.json();
+
+      const cleanData = data.filter(
+        item => item['Article title'] && item['Article body']
+      );
+
+      setArticles(cleanData);
+    } catch (err) {
+      console.log('Fetch error:', err);
+
+      // fallback (offline safety)
+      const cleanData = articlesData.filter(
+        item => item['Article title'] && item['Article body']
+      );
+      setArticles(cleanData);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchArticles();
+}, []);
+
+
 
   // ✅ Categories (same logic)
   const categories = useMemo(() => {
@@ -114,19 +161,23 @@ const KnowledgeBase = ({ navigation }) => {
     return matchSearch && matchCategory;
   });
 
-  // 🔹 Custom sort: Alphabetic first, Numeric last
     return filtered.sort((a, b) => {
       const titleA = (a['Article title'] || '').trim();
       const titleB = (b['Article title'] || '').trim();
 
-      const isAlphaA = /^[A-Za-z]/.test(titleA);
-      const isAlphaB = /^[A-Za-z]/.test(titleB);
+      const numA = parseInt(titleA.match(/^\d+/)?.[0], 10);
+      const numB = parseInt(titleB.match(/^\d+/)?.[0], 10);
 
-      // Agar ek alphabetic aur ek numeric
-      if (isAlphaA && !isAlphaB) return -1; // A → Z pehle
-      if (!isAlphaA && isAlphaB) return 1;  // Numeric last
+      const hasNumA = !isNaN(numA);
+      const hasNumB = !isNaN(numB);
 
-      // Dono alphabetic ya dono numeric → normal alphabetical
+      if (hasNumA && hasNumB) {
+        return numA - numB;
+      }
+
+      if (!hasNumA && hasNumB) return -1;
+      if (hasNumA && !hasNumB) return 1;
+
       return titleA.localeCompare(titleB);
     });
   }, [articles, search, selectedCategory]);
@@ -277,7 +328,7 @@ const KnowledgeBase = ({ navigation }) => {
               renderItem={renderItem}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.articleListContent}
-              ListFooterComponent={<View style={{ height: 565 }} />}
+              ListFooterComponent={<View style={{ height: 580 }} />}
             />
           </View>
         </View>

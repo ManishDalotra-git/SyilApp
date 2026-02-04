@@ -248,8 +248,8 @@ const AskAlex = () => {
         <TextInput
           placeholder="Type your message..."
           value={input}
-          placeholderTextColor="#999"
           onChangeText={setInput}
+          placeholderTextColor="#999"
           style={styles.input}
         />
         <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     safeArea: {
     flex: 1,
     backgroundColor: '#fff',
-    paddingBottom:100,
+    paddingBottom:110,
   },
   header: {
     height: 45,
