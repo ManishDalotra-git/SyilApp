@@ -22,14 +22,13 @@ const UploadArticle = ({ navigation }) => {
   StatusBar.setBarStyle('dark-content');
 
 
-  const API_URL = 'http://192.168.0.37:3000/upload-articles';
+  const API_URL = 'https://syilapp.onrender.com/upload-articles';
 
 
-  // ✅ FILE PICKER with DocumentPicker for file manager
   const handleSelectFile = async () => {
     try {
       const res = await DocumentPicker.pick({
-        type: ['application/json'], // better than allFiles
+        type: ['application/json'], 
       });
 
       const file = res[0];
@@ -57,7 +56,6 @@ const UploadArticle = ({ navigation }) => {
 
       Alert.alert('Success', 'JSON file loaded successfully');
     } catch (err) {
-      // ✅ CORRECT cancel handling for @react-native-documents/picker
       if (err?.code === 'DOCUMENT_PICKER_CANCELED') {
         console.log('User cancelled document picker');
         return;

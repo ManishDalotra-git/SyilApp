@@ -15,6 +15,7 @@ const More = ({ navigation }) => {
     const currentRoute = route.name;  
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
 
     // const [user, setUser] = useState(null);
 
@@ -46,12 +47,15 @@ const More = ({ navigation }) => {
             const loadUserName = async () => {
             const userFirstName = await AsyncStorage.getItem('userFirstName');
             const userLastName = await AsyncStorage.getItem('userLastName');
+            const savedEmail = await AsyncStorage.getItem('userEmail');
 
             console.log('FOCUS firstName:', userFirstName);
             console.log('FOCUS lastName:', userLastName);
+            console.log('FOCUS savedEmail:', savedEmail);
 
             setFirstName(userFirstName || '');
             setLastName(userLastName || '');
+            setEmail(savedEmail || '');
             };
 
             loadUserName();
