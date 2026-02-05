@@ -103,6 +103,7 @@ const More = ({ navigation }) => {
             
             
             {/* Ask Alex */}
+            {email === 'manish.dalotra@techstriker.com' && (
             <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('UploadArticles')} >
                 <View style={styles.left}>
                 <Image source={require('../../images/ArticleIcon.png')} style={styles.icon} />
@@ -110,6 +111,7 @@ const More = ({ navigation }) => {
                 </View>
                 <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
             </TouchableOpacity>
+            )}
 
             {/* Ask Alex */}
             <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('AskAlex')} >
