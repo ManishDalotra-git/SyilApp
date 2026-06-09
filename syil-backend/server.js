@@ -1656,7 +1656,7 @@ app.post('/upload-to-hubspot-view', hubspotUpload.array('files'), async (req, re
 });
 
 app.post('/send-hubspot-message', async (req, res) => {
-  const { threadId, text, recipientEmail, attachmentIds, channelAccountId, channelId, senderActorId } = req.body;
+  const { threadId, text, recipientEmail, attachmentIds, channelAccountId, channelId, senderActorId, subject } = req.body;
 
   console.log('=== send-hubspot-message hit ===');
   console.log('threadId:', threadId);
@@ -1666,12 +1666,14 @@ app.post('/send-hubspot-message', async (req, res) => {
   console.log('channelAccountId:', channelAccountId);
   console.log('channelId:', channelId);
   console.log('senderActorId received:', senderActorId);
+  console.log('subject:', subject);
 
   try {
     // ✅ Postman format exactly match
     const body = {
       type: 'MESSAGE',
       text: text,
+      subject: subject,
       senderActorId: senderActorId,
       channelId: '1002',
       channelAccountId: '597383280',

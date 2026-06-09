@@ -276,6 +276,7 @@ console.log('Selected files before upload:', selectedFiles);
             threadId: conversationsThreadId,
             text: messageText,
             recipientEmail: incomingEmail,
+            subject: incomingSubject,
             attachmentIds,
             senderActorId: senderActorId,
           }),
