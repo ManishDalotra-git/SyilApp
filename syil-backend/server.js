@@ -469,6 +469,8 @@ app.post('/create-ticket', async (req, res) => {
     const fetch = (...args) =>
       import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
+    await new Promise(resolve => setTimeout(resolve, 15000));
+
     const searchResponse = await fetch(
       'https://api.hubapi.com/crm/v3/objects/contacts/search',
       {
@@ -1321,7 +1323,7 @@ app.post('/get_tickets', async (req, res) => {
     // ============================
     const ticketPromises = ticketIds.map(ticketId =>
       fetch(
-        `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage`,
+        `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage,customer_portal`,
         {
           method: 'GET',
           headers: {
@@ -1340,6 +1342,7 @@ app.post('/get_tickets', async (req, res) => {
       createdDate: ticket.properties.createdate || '',
       ownerId: ticket.properties.hubspot_owner_id || '',
       status: ticket.properties.hs_pipeline_stage || '',
+      customer_portal: ticket.properties.customer_portal || '',
     }));
 
     return res.status(200).json({
@@ -1402,6 +1405,7 @@ app.post('/get_owner_ticket', async (req, res) => {
               'hs_pipeline_stage',
               'hubspot_owner_id',
               'createdate',
+              'customer_portal',
             ],
             sorts: ['createdate'],
           }),
@@ -1424,6 +1428,7 @@ app.post('/get_owner_ticket', async (req, res) => {
       ownerId: item.properties.hubspot_owner_id || '',
       status: item.properties.hs_pipeline_stage || '',
       content: item.properties.content || '',
+      customer_portal: item.properties.customer_portal || '',
     }));
 
     return res.status(200).json({

@@ -352,7 +352,12 @@ console.log('Final senderActorId:', senderActorId);
             )}
 
             <FlatList
-              data={tickets}
+              //data={tickets}
+              data={tickets.filter(
+                  item =>
+                      item.customer_portal !== 'True' ||
+                      item.customer_portal !== true
+              )}
               keyExtractor={(item) => item.ticketId}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{
@@ -382,8 +387,12 @@ console.log('Final senderActorId:', senderActorId);
               )}
             />
 
-            {!loading && tickets.length === 0 && (
+            {/* {!loading && tickets.length === 0 && (
               <Text style={styles.noTicketText}>No tickets found</Text>
+            )} */}
+            {!loading &&
+            tickets.filter(item => item.customer_portal !== 'True').length === 0 && (
+                <Text style={styles.noTicketText}>No tickets found</Text>
             )}
           </View>
         </View>
