@@ -354,9 +354,9 @@ console.log('Final senderActorId:', senderActorId);
             <FlatList
               //data={tickets}
               data={tickets.filter(
-                  item =>
-                      item.customer_portal !== 'True' ||
-                      item.customer_portal !== true
+                item =>
+                    item.customer_portal === '' || item.customer_portal === ' ' || item.customer_portal === 'False' ||
+                    item.customer_portal === false
               )}
               keyExtractor={(item) => item.ticketId}
               showsVerticalScrollIndicator={false}
@@ -391,9 +391,9 @@ console.log('Final senderActorId:', senderActorId);
               <Text style={styles.noTicketText}>No tickets found</Text>
             )} */}
             {!loading &&
-            tickets.filter(item => item.customer_portal !== 'True').length === 0 && (
-                <Text style={styles.noTicketText}>No tickets found</Text>
-            )}
+                            tickets.filter(item => item.customer_portal === '' || item.customer_portal === ' ' || item.customer_portal === 'False' || item.customer_portal === false).length === 0 && (
+                                <Text style={styles.noTicketText}>No tickets found</Text>
+                            )}
           </View>
         </View>
       </View>
