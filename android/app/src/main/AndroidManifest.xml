@@ -8,6 +8,7 @@
 
     <!-- Android 12 and below -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
     <package android:name="com.microsoft.office.outlook" />

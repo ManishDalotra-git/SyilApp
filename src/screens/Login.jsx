@@ -13,6 +13,7 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage'; 
 import { setContactId } from '../utils/hiddenFields';
+import { saveFCMToken } from '../utils/fcm';
 
 const Login = () => {
 
@@ -31,6 +32,8 @@ const handleSubmit = async () => {
   setLoading(true);
 
   // https://syilapp-w8ye.onrender.com/check_login_detail
+
+  //'http://192.168.0.50:3000/check_login_detail',
 
   try {
       const response = await fetch(
@@ -80,6 +83,8 @@ const handleSubmit = async () => {
     await AsyncStorage.setItem('app_support_team_member', String(result.user?.app_support_team_member ?? ''));
 
     console.log('result.user----- ', result.user);
+
+    await saveFCMToken(username);
 
       const userID = await AsyncStorage.getItem('userID');
       const userFirstName = await AsyncStorage.getItem('userFirstName');

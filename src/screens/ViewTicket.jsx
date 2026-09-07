@@ -65,7 +65,8 @@ const ViewTicket = ({ navigation }) => {
     //                 setLoading(true);
 
     //                 //https://syilapp-w8ye.onrender.com/get_contact_tickets
-    //                 //http://192.168.0.28:3000
+    //                 //http://192.168.0.50:3000
+
 
     //                 const response = await fetch('http://192.168.0.36:3000/get_contact_tickets', {
     //                 method: 'POST',
@@ -415,12 +416,6 @@ const ViewTicket = ({ navigation }) => {
                 tickets.filter(item => item.customer_portal === '' || item.customer_portal === ' ' || item.customer_portal === 'False' || item.customer_portal === false).length === 0 && (
                     <Text style={styles.noTicketText}>No tickets found</Text>
                 )}
-
-
-                
-
-
-
 
                 </View>
         </View>
