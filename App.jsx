@@ -19,13 +19,17 @@ import UploadArticles from './src/screens/UploadArticles';
 import OwnerTickets from './src/screens/OwnerTickets';
 import Chatscreen from './src/screens/Chatscreen';
 
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  createNavigationContainerRef,
+} from '@react-navigation/native';
 
 const Stack = createNativeStackNavigator();
+export const navigationRef = createNavigationContainerRef();
   
 const App = () => {
   return (
-     <NavigationContainer>
+     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator>
         <Stack.Screen name="Loading" component={Loading} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
