@@ -1,4 +1,33 @@
 require('dotenv').config();
+
+const {
+  initializeApp,
+  cert,
+  getApps,
+} = require('firebase-admin/app');
+
+const { getMessaging } = require(
+  'firebase-admin/messaging',
+);
+
+if (!process.env.FIREBASE_ADMIN_SDK) {
+  throw new Error(
+    'FIREBASE_ADMIN_SDK environment variable is missing',
+  );
+}
+
+const firebaseServiceAccount = JSON.parse(
+  process.env.FIREBASE_ADMIN_SDK,
+);
+
+if (getApps().length === 0) {
+  initializeApp({
+    credential: cert(firebaseServiceAccount),
+  });
+}
+
+console.log('Firebase Admin initialized');
+
 const express = require('express');
 const bodyParser = require('body-parser');
 
@@ -239,6 +268,167 @@ app.post('/upload-articles', upload.single('file'), (req, res) => {
   });
 });
 
+
+
+
+app.post(
+  '/save-dealer-fcm-token',
+  async (req, res) => {
+    const {
+      email,
+      fcmToken,
+      platform,
+    } = req.body;
+
+    if (!email || !fcmToken) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Email and FCM token are required',
+      });
+    }
+
+    try {
+      const fetch = (...args) =>
+        import('node-fetch').then(
+          ({ default: fetch }) => fetch(...args),
+        );
+
+      /*
+       * Find HubSpot contact.
+       */
+      const searchResponse = await fetch(
+        'https://api.hubapi.com/crm/v3/objects/contacts/search',
+        {
+          method: 'POST',
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName: 'email',
+                    operator: 'EQ',
+                    value: email
+                      .trim()
+                      .toLowerCase(),
+                  },
+                ],
+              },
+            ],
+            properties: [
+              'email',
+              'dealer_fcm_token',
+            ],
+            limit: 1,
+          }),
+        },
+      );
+
+      const searchData =
+        await searchResponse.json();
+
+      if (!searchResponse.ok) {
+        console.error(
+          'HubSpot contact search error:',
+          searchData,
+        );
+
+        return res.status(searchResponse.status).json({
+          success: false,
+          message:
+            'Unable to search HubSpot contact',
+          detail: searchData,
+        });
+      }
+
+      if (!searchData.results?.length) {
+        return res.status(404).json({
+          success: false,
+          message: 'HubSpot contact not found',
+        });
+      }
+
+      const contactId =
+        searchData.results[0].id;
+
+      /*
+       * Save Dealer app FCM token.
+       */
+      const updateResponse = await fetch(
+        `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            properties: {
+              dealer_fcm_token: fcmToken,
+            },
+          }),
+        },
+      );
+
+      const updateText =
+        await updateResponse.text();
+
+      let updateData = {};
+
+      try {
+        updateData = updateText
+          ? JSON.parse(updateText)
+          : {};
+      } catch {
+        updateData = {
+          rawResponse: updateText,
+        };
+      }
+
+      if (!updateResponse.ok) {
+        console.error(
+          'HubSpot token update error:',
+          updateData,
+        );
+
+        return res.status(updateResponse.status).json({
+          success: false,
+          message:
+            'Dealer FCM token could not be saved',
+          detail: updateData,
+        });
+      }
+
+      console.log(
+        `Dealer FCM token saved for contact ${contactId}, platform ${platform || 'unknown'}`,
+      );
+
+      return res.status(200).json({
+        success: true,
+        message:
+          'Dealer FCM token saved successfully',
+        contactId,
+        platform: platform || '',
+      });
+    } catch (error) {
+      console.error(
+        'Save dealer FCM token error:',
+        error,
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+      });
+    }
+  },
+);
 
 
 
