@@ -18,9 +18,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Footer from './components/Footer';
 import Video from 'react-native-video';
@@ -31,9 +30,10 @@ const ViewTicketDetail = ({ navigation }) => {
   StatusBar.setBarStyle('dark-content');
 
   const route = useRoute();
-  const { ticketId } = route.params || {};
-  const { subject } = route.params || {};
+
+  const { ticketId, subject } = route.params || {};
   const currentRoute = route.name;
+
   const [appSupportTeamMember, setAppSupportTeamMember] = useState(false);
 
   const [firstName, setFirstName] = useState('');
@@ -44,122 +44,422 @@ const ViewTicketDetail = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  // ✅ Modal States
+  // Modal States
   const [replyModalVisible, setReplyModalVisible] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [sending, setSending] = useState(false);
   const [senderActorId, setSenderActorId] = useState('');
 
-  /* ================= USER INFO ================= */
+  /* =========================================================
+     USER INFO
+  ========================================================= */
+
   useFocusEffect(
     useCallback(() => {
       const loadUserName = async () => {
-        const userFirstName = await AsyncStorage.getItem('userFirstName');
-        const userLastName = await AsyncStorage.getItem('userLastName');
-        const userContactID = await AsyncStorage.getItem('userID');
-        const savedEmail = await AsyncStorage.getItem('userEmail');
-        setEmail(savedEmail || '');
-        setFirstName(userFirstName || '');
-        setLastName(userLastName || '');
-        setContactID(userContactID || '');
+        try {
+          const userFirstName =
+            await AsyncStorage.getItem('userFirstName');
 
-        const AppSupportTeamMember = await AsyncStorage.getItem('app_support_team_member');
-    console.log('AppSupportTeamMember:', AppSupportTeamMember);
-    
+          const userLastName =
+            await AsyncStorage.getItem('userLastName');
 
-    if(AppSupportTeamMember === 'Yes'){
-      setAppSupportTeamMember(true);
-      console.log('AppSupportTeamMember---yes:', AppSupportTeamMember);
-    }
+          const userContactID =
+            await AsyncStorage.getItem('userID');
+
+          const savedEmail =
+            await AsyncStorage.getItem('userEmail');
+
+          const AppSupportTeamMember =
+            await AsyncStorage.getItem(
+              'app_support_team_member'
+            );
+
+          setEmail(savedEmail || '');
+          setFirstName(userFirstName || '');
+          setLastName(userLastName || '');
+          setContactID(userContactID || '');
+
+          console.log(
+            '================ USER INFO ================'
+          );
+
+          console.log(
+            'userContactID:',
+            userContactID
+          );
+
+          console.log(
+            'savedEmail:',
+            savedEmail
+          );
+
+          console.log(
+            'AppSupportTeamMember:',
+            AppSupportTeamMember
+          );
+
+          if (
+            AppSupportTeamMember === 'Yes'
+          ) {
+            setAppSupportTeamMember(true);
+          } else {
+            setAppSupportTeamMember(false);
+          }
+        } catch (error) {
+          console.log(
+            'Load user info error:',
+            error
+          );
+        }
       };
+
       loadUserName();
     }, [])
   );
 
-  const isChen = email === 'manish.dalotra@techstriker.com';
+  const isChen =
+    email === 'manish.dalotra@techstriker.com';
 
-  /* ================= CONVERSATION ================= */
+  /* =========================================================
+     MARK TICKET AS READ
+  ========================================================= */
+
+  const markTicketAsRead = async () => {
+    try {
+      if (!ticketId) {
+        console.log(
+          '❌ Mark ticket read skipped: ticketId missing'
+        );
+        return;
+      }
+
+      if (!contactID) {
+        console.log(
+          '❌ Mark ticket read skipped: contactID missing'
+        );
+        return;
+      }
+
+      console.log(
+        '=========================================='
+      );
+
+      console.log(
+        'MARKING TICKET AS READ'
+      );
+
+      console.log(
+        'ticketId:',
+        ticketId
+      );
+
+      console.log(
+        'contactID:',
+        contactID
+      );
+
+      console.log(
+        '=========================================='
+      );
+
+      const response = await fetch(
+        'https://syilapp-w8ye.onrender.com/mark-ticket-read',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ticketId: String(ticketId),
+            contactId: String(contactID),
+          }),
+        }
+      );
+
+      const responseText =
+        await response.text();
+
+      console.log(
+        'Mark ticket read HTTP status:',
+        response.status
+      );
+
+      console.log(
+        'Mark ticket read raw response:',
+        responseText
+      );
+
+      let data = {};
+
+      try {
+        data = responseText
+          ? JSON.parse(responseText)
+          : {};
+      } catch (parseError) {
+        console.log(
+          '❌ Mark ticket read JSON parse error:',
+          parseError
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        console.log(
+          '❌ Mark ticket read failed:',
+          data
+        );
+        return;
+      }
+
+      console.log(
+        '✅ Ticket marked as read successfully'
+      );
+
+      console.log(
+        'Ticket unread count:',
+        data.ticketUnreadCount
+      );
+
+      console.log(
+        'Total unread count:',
+        data.totalUnreadCount
+      );
+    } catch (error) {
+      console.log(
+        '❌ Mark ticket read error:',
+        error
+      );
+    }
+  };
+
+  /* =========================================================
+     MARK TICKET READ WHEN SCREEN OPENS
+  ========================================================= */
+
   useFocusEffect(
     useCallback(() => {
-      const fetchTicketConversation = async () => {
-        if (!ticketId) return;
-        try {
-          setLoading(true);
-          const response = await fetch(
-            'https://syilapp-w8ye.onrender.com/get_ticket_conversation',
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ticketId }),
-            }
-          );
-          const data = await response.json();
-          console.log('Conversation data----- ', data);
-          setMessages(data.messages || []);
-        } catch (error) {
-          console.log('Conversation fetch error', error);
-        } finally {
-          setLoading(false);
-        }
-      };
+      if (!ticketId || !contactID) {
+        console.log(
+          'Mark read waiting for ticketId/contactID:',
+          {
+            ticketId,
+            contactID,
+          }
+        );
+
+        return;
+      }
+
+      markTicketAsRead();
+    }, [ticketId, contactID])
+  );
+
+  /* =========================================================
+     CONVERSATION
+  ========================================================= */
+
+  useFocusEffect(
+    useCallback(() => {
+      const fetchTicketConversation =
+        async () => {
+          if (!ticketId) {
+            return;
+          }
+
+          try {
+            setLoading(true);
+
+            const response =
+              await fetch(
+                'https://syilapp-w8ye.onrender.com/get_ticket_conversation',
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type':
+                      'application/json',
+                  },
+                  body: JSON.stringify({
+                    ticketId,
+                  }),
+                }
+              );
+
+            const data =
+              await response.json();
+
+            console.log(
+              'Conversation data----- ',
+              data
+            );
+
+            setMessages(
+              data.messages || []
+            );
+          } catch (error) {
+            console.log(
+              'Conversation fetch error',
+              error
+            );
+          } finally {
+            setLoading(false);
+          }
+        };
+
       fetchTicketConversation();
     }, [ticketId])
   );
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      if (!ticketId) return;
-      const response = await fetch(
-        'https://syilapp-w8ye.onrender.com/get_ticket_conversation',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ ticketId }),
+  /* =========================================================
+     REFRESH CONVERSATION
+  ========================================================= */
+
+  const onRefresh = useCallback(
+    async () => {
+      setRefreshing(true);
+
+      try {
+        if (!ticketId) {
+          return;
         }
+
+        const response =
+          await fetch(
+            'https://syilapp-w8ye.onrender.com/get_ticket_conversation',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type':
+                  'application/json',
+              },
+              body: JSON.stringify({
+                ticketId,
+              }),
+            }
+          );
+
+        const data =
+          await response.json();
+
+        console.log(
+          'data----- ',
+          data
+        );
+
+        setMessages(
+          data.messages || []
+        );
+      } catch (error) {
+        console.log(
+          'Refresh error',
+          error
+        );
+      } finally {
+        setRefreshing(false);
+      }
+    },
+    [ticketId]
+  );
+
+  /* =========================================================
+     MESSAGE DATA
+  ========================================================= */
+
+  const initialMessage =
+    messages[messages.length - 1];
+
+  const dynamicSubject =
+    initialMessage?.subject;
+
+  const outgoingMessage =
+    messages.find(
+      msg =>
+        msg.direction ===
+        'OUTGOING'
+    );
+
+  const hasOutgoing =
+    messages.some(
+      msg =>
+        msg.direction ===
+        'OUTGOING'
+    );
+
+  const dynamicEmail =
+    outgoingMessage?.senderName;
+
+  const channelAccountId =
+    outgoingMessage?.channelAccountId;
+
+  const channelId =
+    outgoingMessage?.channelId;
+
+  const conversationsThreadId =
+    initialMessage
+      ?.conversationsThreadId;
+
+  console.log(
+    'Initial Message:',
+    conversationsThreadId
+  );
+
+  const incomingMessage =
+    [...messages]
+      .reverse()
+      .find(
+        msg =>
+          msg.direction ===
+            'INCOMING' &&
+          msg.senderName?.includes(
+            '@'
+          )
       );
-      const data = await response.json();
-      console.log('data----- ', data);
-      setMessages(data.messages || []);
-    } catch (error) {
-      console.log('Refresh error', error);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [ticketId]);
 
-  const initialMessage = messages[messages.length - 1];
-  const dynamicSubject = initialMessage?.subject;
-  const outgoingMessage = messages.find(msg => msg.direction === 'OUTGOING');
-  const hasOutgoing = messages.some(msg => msg.direction === 'OUTGOING');
-  const dynamicEmail = outgoingMessage?.senderName;
-  const channelAccountId = outgoingMessage?.channelAccountId;
-  const channelId = outgoingMessage?.channelId;
-  const conversationsThreadId = initialMessage?.conversationsThreadId;
-  //const initialMessageemail = initialMessage?.senderName; 
+  const incomingEmail =
+    initialMessage?.senderName;
 
-  console.log('Initial Message:', conversationsThreadId);
+  const incomingSubject =
+    incomingMessage?.subject;
 
-  const incomingMessage = [...messages]
-    .reverse()
-    .find(msg => msg.direction === 'INCOMING' && msg.senderName?.includes('@'));
+  const hasOutgoings =
+    messages.filter(
+      msg =>
+        msg.direction ===
+        'OUTGOING'
+    ).length;
 
-  const incomingEmail = initialMessage?.senderName;
-  const incomingSubject = incomingMessage?.subject;
+  const subjectPrefix =
+    hasOutgoings > 1
+      ? 'Re: '
+      : '';
 
-  const hasOutgoings = messages.filter(msg => msg.direction === 'OUTGOING').length;
-  const subjectPrefix = hasOutgoings > 1 ? 'Re: ' : '';
+  const getSenderName =
+    item =>
+      item?.senderName ||
+      email;
 
-  const getSenderName = (item) => item?.senderName || email;
+  const getInitials = (
+    firstName = '',
+    lastName = ''
+  ) => {
+    const f =
+      firstName
+        ?.charAt(0)
+        ?.toUpperCase() || '';
 
-  const getInitials = (firstName = '', lastName = '') => {
-    const f = firstName?.charAt(0)?.toUpperCase() || '';
-    const l = lastName?.charAt(0)?.toUpperCase() || '';
+    const l =
+      lastName
+        ?.charAt(0)
+        ?.toUpperCase() || '';
+
     return `${f}${l}`;
   };
 
-  /* ================= FILE PICKER ================= */
+  /* =========================================================
+     FILE PICKER
+  ========================================================= */
+
   const pickFiles = () => {
     launchImageLibrary(
       {
@@ -167,153 +467,301 @@ const ViewTicketDetail = ({ navigation }) => {
         selectionLimit: 0,
         quality: 0.8,
       },
-      (response) => {
-        if (response.didCancel) return;
-        if (response.errorCode) {
-          Alert.alert('Error', response.errorMessage);
+      response => {
+        if (response.didCancel) {
           return;
         }
-        if (response.assets && response.assets.length > 0) {
-          const files = response.assets.map((asset) => ({
-            uri: asset.uri,
-            name: asset.fileName || `file_${Date.now()}`,
-            type: asset.type || 'image/jpeg',
-          }));
-          setSelectedFiles((prev) => [...prev, ...files]);
+
+        if (response.errorCode) {
+          Alert.alert(
+            'Error',
+            response.errorMessage
+          );
+          return;
+        }
+
+        if (
+          response.assets &&
+          response.assets.length > 0
+        ) {
+          const files =
+            response.assets.map(
+              asset => ({
+                uri: asset.uri,
+                name:
+                  asset.fileName ||
+                  `file_${Date.now()}`,
+                type:
+                  asset.type ||
+                  'image/jpeg',
+              })
+            );
+
           setSelectedFiles(files);
-          console.log('Selected files:', files);
+
+          console.log(
+            'Selected files:',
+            files
+          );
         }
       }
     );
   };
 
-  const removeFile = (index) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeFile = index => {
+    setSelectedFiles(
+      prev =>
+        prev.filter(
+          (_, i) =>
+            i !== index
+        )
+    );
   };
 
-  /* ================= SEND TO CUSTOMER ================= */
-  const sendToCustomer = async () => {
-    if (!messageText.trim()) {
-      Alert.alert('Error', 'Message is required');
-      return;
-    }
+  /* =========================================================
+     SEND TO CUSTOMER
+  ========================================================= */
 
-    setSending(true);
-    try {
-      let attachmentIds = [];
-
-      const ownerRes = await fetch(
-      'https://syilapp-w8ye.onrender.com/get-owner-id',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email }),
+  const sendToCustomer =
+    async () => {
+      if (!messageText.trim()) {
+        Alert.alert(
+          'Error',
+          'Message is required'
+        );
+        return;
       }
-);
 
-const ownerRaw = await ownerRes.text();
-console.log('Owner RAW response:', ownerRaw);
-console.log('Owner status:', ownerRes.status);
+      setSending(true);
 
-const ownerData = JSON.parse(ownerRaw);
-console.log('ownerId mila:', ownerData.ownerId);
+      try {
+        let attachmentIds = [];
 
-const senderActorId = ownerData.ownerId
-  ? `A-${ownerData.ownerId}`
-  : 'A-7712092';
+        const ownerRes =
+          await fetch(
+            'https://syilapp-w8ye.onrender.com/get-owner-id',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type':
+                  'application/json',
+              },
+              body: JSON.stringify({
+                email: email,
+              }),
+            }
+          );
 
-console.log('Final senderActorId:', senderActorId);
+        const ownerRaw =
+          await ownerRes.text();
 
-setSenderActorId(senderActorId)
-console.log('SenderActorId---- ', senderActorId);
-
-
-
-console.log('Selected files before upload:', selectedFiles);
-
-
-      if (selectedFiles.length > 0) {
-        const formData = new FormData();
-        selectedFiles.forEach((file) => {
-          formData.append('files', {
-            uri: file.uri,
-            name: file.name,
-            type: file.type,
-          });
-        });
-
-        console.log('formData-----  ', formData)
-
-
-        const uploadRes = await fetch(
-          'https://syilapp-w8ye.onrender.com/upload-to-hubspot-view',
-          {
-            method: 'POST',
-            body: formData,
-            headers: { 'Content-Type': 'multipart/form-data' },
-          }
+        console.log(
+          'Owner RAW response:',
+          ownerRaw
         );
 
-        console.log('Selected files before upload:--- upload-to-hubspotss---  ', selectedFiles);
-        const uploadData = await uploadRes.json();
+        console.log(
+          'Owner status:',
+          ownerRes.status
+        );
 
-        console.log('Upload response', uploadData);
+        const ownerData =
+          JSON.parse(ownerRaw);
 
-        attachmentIds = uploadData.files.map((f) => f.id); 
+        console.log(
+          'ownerId mila:',
+          ownerData.ownerId
+        );
 
+        const finalSenderActorId =
+          ownerData.ownerId
+            ? `A-${ownerData.ownerId}`
+            : 'A-7712092';
 
-      }
+        console.log(
+          'Final senderActorId:',
+          finalSenderActorId
+        );
 
+        setSenderActorId(
+          finalSenderActorId
+        );
 
+        console.log(
+          'SenderActorId---- ',
+          finalSenderActorId
+        );
 
-      
-      const sendRes = await fetch(
-        'https://syilapp-w8ye.onrender.com/send-hubspot-message',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            threadId: conversationsThreadId,
-            text: messageText,
-            recipientEmail: incomingEmail,
-            subject: incomingSubject,
-            attachmentIds,
-            senderActorId: senderActorId,
-          }),
+        console.log(
+          'Selected files before upload:',
+          selectedFiles
+        );
+
+        /* ================= FILE UPLOAD ================= */
+
+        if (
+          selectedFiles.length > 0
+        ) {
+          const formData =
+            new FormData();
+
+          selectedFiles.forEach(
+            file => {
+              formData.append(
+                'files',
+                {
+                  uri: file.uri,
+                  name: file.name,
+                  type: file.type,
+                }
+              );
+            }
+          );
+
+          console.log(
+            'formData-----  ',
+            formData
+          );
+
+          const uploadRes =
+            await fetch(
+              'https://syilapp-w8ye.onrender.com/upload-to-hubspot-view',
+              {
+                method: 'POST',
+                body: formData,
+                headers: {
+                  'Content-Type':
+                    'multipart/form-data',
+                },
+              }
+            );
+
+          console.log(
+            'Selected files before upload:--- upload-to-hubspotss---  ',
+            selectedFiles
+          );
+
+          const uploadData =
+            await uploadRes.json();
+
+          console.log(
+            'Upload response',
+            uploadData
+          );
+
+          attachmentIds =
+            uploadData.files.map(
+              f => f.id
+            );
         }
-      );
 
-      const sendData = await sendRes.json();
+        /* ================= SEND MESSAGE ================= */
 
-      console.log('Send response', sendData);
+        const sendRes =
+          await fetch(
+            'https://syilapp-w8ye.onrender.com/send-hubspot-message',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type':
+                  'application/json',
+              },
+              body: JSON.stringify({
+                threadId:
+                  conversationsThreadId,
+                text: messageText,
+                recipientEmail:
+                  incomingEmail,
+                subject:
+                  incomingSubject,
+                attachmentIds,
+                senderActorId:
+                  finalSenderActorId,
+              }),
+            }
+          );
 
-      if (sendData.success) {
-        Alert.alert('Success', 'Message sent successfully!');
-        setReplyModalVisible(false);
-        setMessageText('');
-        setSelectedFiles([]);
-        attachmentIds = [];
-        onRefresh();
-      } else {
-        Alert.alert('Error', 'Message not sent. Please try again.');
+        const sendData =
+          await sendRes.json();
+
+        console.log(
+          'Send response',
+          sendData
+        );
+
+        if (sendData.success) {
+          Alert.alert(
+            'Success',
+            'Message sent successfully!'
+          );
+
+          setReplyModalVisible(
+            false
+          );
+
+          setMessageText('');
+
+          setSelectedFiles([]);
+
+          attachmentIds = [];
+
+          onRefresh();
+        } else {
+          Alert.alert(
+            'Error',
+            'Message not sent. Please try again.'
+          );
+        }
+      } catch (err) {
+        console.log(
+          'Send error',
+          err
+        );
+
+        Alert.alert(
+          'Error',
+          'An error occurred while sending the message. Please try again.'
+        );
+      } finally {
+        setSending(false);
       }
-    } catch (err) {
-      console.log('Send error', err);
-      Alert.alert('Error', 'An error occurred while sending the message. Please try again.');
-    } finally {
-      setSending(false);
-    }
-  };
+    };
+
+  /* =========================================================
+     UI
+  ========================================================= */
 
   return (
-    <ImageBackground style={styles.background} resizeMode="cover">
+    <ImageBackground
+      style={styles.background}
+      resizeMode="cover"
+    >
       <View style={styles.container}>
+
         {/* HEADER */}
+
         <View style={styles.flexClass}>
-          <Pressable onPress={() => navigation.navigate('Profile')}>
-            <View style={styles.initialsAvatar}>
-              <Text style={styles.initialsText}>
-                {getInitials(firstName, lastName)}
+          <Pressable
+            onPress={() =>
+              navigation.navigate(
+                'Profile'
+              )
+            }
+          >
+            <View
+              style={
+                styles.initialsAvatar
+              }
+            >
+              <Text
+                style={
+                  styles.initialsText
+                }
+              >
+                {getInitials(
+                  firstName,
+                  lastName
+                )}
               </Text>
             </View>
           </Pressable>
@@ -323,19 +771,33 @@ console.log('Selected files before upload:', selectedFiles);
             style={styles.logoSyil}
           />
 
-          <Pressable onPress={() => navigation.navigate('Ticket')}>
+          <Pressable
+            onPress={() =>
+              navigation.navigate(
+                'Ticket'
+              )
+            }
+          >
             <Image
               source={require('../../images/ticket.png')}
-              style={styles.ticketIcon}
+              style={
+                styles.ticketIcon
+              }
             />
           </Pressable>
         </View>
 
         {/* MESSAGES */}
-        <View style={{ flex: 1 }}>
+
+        <View
+          style={{
+            flex: 1,
+          }}
+        >
           <TouchableOpacity
             style={{
-              backgroundColor: '#FFEA00',
+              backgroundColor:
+                '#FFEA00',
               padding: 5,
               paddingHorizontal: 10,
               borderRadius: 8,
@@ -349,114 +811,234 @@ console.log('Selected files before upload:', selectedFiles);
           >
             <Image
               source={require('../../images/refresh.png')}
-              style={styles.refreshIcon}
+              style={
+                styles.refreshIcon
+              }
             />
-            <Text style={{ color: '#000000', fontWeight: '500' }}>Refresh</Text>
+
+            <Text
+              style={{
+                color: '#000000',
+                fontWeight: '500',
+              }}
+            >
+              Refresh
+            </Text>
           </TouchableOpacity>
 
-          <Text style={styles.subject}>{subject}</Text>
-          <Text style={styles.ticket}>#{ticketId}</Text>
+          <Text
+            style={styles.subject}
+          >
+            {subject}
+          </Text>
+
+          <Text
+            style={styles.ticket}
+          >
+            #{ticketId}
+          </Text>
 
           {loading && (
-            <Text style={{ textAlign: 'center', padding: 10 }}>
+            <Text
+              style={{
+                textAlign: 'center',
+                padding: 10,
+              }}
+            >
               Loading conversation...
             </Text>
           )}
 
           <FlatList
             data={messages}
-            showsVerticalScrollIndicator={false}
-            keyExtractor={(item) =>
-              item.id?.toString() || Math.random().toString()
+            showsVerticalScrollIndicator={
+              false
             }
-            style={{ flex: 1, paddingBottom: 0 }}
+            keyExtractor={item =>
+              item.id?.toString() ||
+              Math.random().toString()
+            }
+            style={{
+              flex: 1,
+              paddingBottom: 0,
+            }}
             contentContainerStyle={{
               paddingBottom: 100,
               paddingTop: 0,
-              flexDirection: 'column-reverse',
+              flexDirection:
+                'column-reverse',
             }}
-            renderItem={({ item }) => (
+            renderItem={({
+              item,
+            }) => (
               <View
                 style={[
                   styles.messageBubble,
-                  item.direction === 'OUTGOING'
+
+                  item.direction ===
+                  'OUTGOING'
                     ? styles.outgoing
                     : styles.incoming,
                 ]}
               >
-                <Text style={styles.senderName}>{getSenderName(item)}</Text>
-                <Text style={styles.messageText}>{item.text || ''}</Text>
+                <Text
+                  style={
+                    styles.senderName
+                  }
+                >
+                  {getSenderName(item)}
+                </Text>
 
-                {item.attachments && item.attachments.length > 0 && (
-                  <View style={{ marginTop: 5 }}>
-    {item.attachments.map((attachment, index) => {
-      
-      if (attachment.fileUsageType === 'IMAGE') {
-        return (
-          <Image
-            key={index}
-            source={{ uri: attachment.url }}
-            style={styles.attachmentImage}
-          />
-        );
-      }
+                <Text
+                  style={
+                    styles.messageText
+                  }
+                >
+                  {item.text || ''}
+                </Text>
 
-      if (attachment.fileUsageType === 'OTHER') {
-        return (
-          <Video
-            key={index}
-            source={{ uri: attachment.url }}
-            style={styles.video}
-            controls={true}
-            resizeMode="contain"
-            paused={true} 
-          />
-        );
-      }
+                {item.attachments &&
+                  item.attachments
+                    .length > 0 && (
+                    <View
+                      style={{
+                        marginTop: 5,
+                      }}
+                    >
+                      {item.attachments.map(
+                        (
+                          attachment,
+                          index
+                        ) => {
+                          if (
+                            attachment.fileUsageType ===
+                            'IMAGE'
+                          ) {
+                            return (
+                              <Image
+                                key={
+                                  index
+                                }
+                                source={{
+                                  uri: attachment.url,
+                                }}
+                                style={
+                                  styles.attachmentImage
+                                }
+                              />
+                            );
+                          }
 
-      return null;
-    })}
-  </View>
-                )}
+                          if (
+                            attachment.fileUsageType ===
+                            'OTHER'
+                          ) {
+                            return (
+                              <Video
+                                key={
+                                  index
+                                }
+                                source={{
+                                  uri: attachment.url,
+                                }}
+                                style={
+                                  styles.video
+                                }
+                                controls={
+                                  true
+                                }
+                                resizeMode="contain"
+                                paused={
+                                  true
+                                }
+                              />
+                            );
+                          }
+
+                          return null;
+                        }
+                      )}
+                    </View>
+                  )}
               </View>
             )}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              <RefreshControl
+                refreshing={
+                  refreshing
+                }
+                onRefresh={onRefresh}
+              />
             }
           />
 
-          {!loading && messages.length === 0 && (
-            <Text style={styles.noTicketText}>No conversation found</Text>
-          )}
+          {!loading &&
+            messages.length ===
+              0 && (
+              <Text
+                style={
+                  styles.noTicketText
+                }
+              >
+                No conversation found
+              </Text>
+            )}
 
-          
-          {appSupportTeamMember === true ? (
-           
+          {appSupportTeamMember ===
+          true ? (
             <TouchableOpacity
-              style={styles.ReplyStyle}
+              style={
+                styles.ReplyStyle
+              }
               onPress={() => {
-  setSelectedFiles([]);
-  setMessageText('');
-  setReplyModalVisible(true);
-}}
+                setSelectedFiles(
+                  []
+                );
+                setMessageText(
+                  ''
+                );
+                setReplyModalVisible(
+                  true
+                );
+              }}
             >
-              <Text style={{ color: '#fff', textAlign: 'center', fontWeight: '500', fontSize: 16 }}>
+              <Text
+                style={{
+                  color: '#fff',
+                  textAlign: 'center',
+                  fontWeight: '500',
+                  fontSize: 16,
+                }}
+              >
                 Reply to Customer
               </Text>
             </TouchableOpacity>
-          ) : messages.length === 1 ? (
-            <Text style={[styles.ReplyStyle, { backgroundColor: '#999' }]}>
-              Please wait for the support reply.
+          ) : messages.length ===
+            1 ? (
+            <Text
+              style={[
+                styles.ReplyStyle,
+                {
+                  backgroundColor:
+                    '#999',
+                },
+              ]}
+            >
+              Please wait for the
+              support reply.
             </Text>
           ) : hasOutgoing ? (
-            
             <Text
-              style={styles.ReplyStyle}
+              style={
+                styles.ReplyStyle
+              }
               onPress={() =>
                 Linking.openURL(
                   `mailto:${dynamicEmail}?subject=Re:%20${encodeURIComponent(
                     dynamicSubject
-                  )}&body=${encodeURIComponent('Hello Support SYIL,')}`
+                  )}&body=${encodeURIComponent(
+                    'Hello Support SYIL,'
+                  )}`
                 )
               }
             >
@@ -466,93 +1048,210 @@ console.log('Selected files before upload:', selectedFiles);
         </View>
       </View>
 
-     
+      {/* =====================================================
+          REPLY MODAL
+      ===================================================== */}
+
       <Modal
-        visible={replyModalVisible}
+        visible={
+          replyModalVisible
+        }
         animationType="slide"
         transparent={true}
         onRequestClose={() => {
-          setReplyModalVisible(false);
+          setReplyModalVisible(
+            false
+          );
           setMessageText('');
           setSelectedFiles([]);
         }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-           
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Reply to Customer</Text>
+        <View
+          style={
+            styles.modalOverlay
+          }
+        >
+          <View
+            style={
+              styles.modalContainer
+            }
+          >
+            <View
+              style={
+                styles.modalHeader
+              }
+            >
+              <Text
+                style={
+                  styles.modalTitle
+                }
+              >
+                Reply to Customer
+              </Text>
+
               <TouchableOpacity
                 onPress={() => {
-                  setReplyModalVisible(false);
-                  setMessageText('');
-                  setSelectedFiles([]);
+                  setReplyModalVisible(
+                    false
+                  );
+                  setMessageText(
+                    ''
+                  );
+                  setSelectedFiles(
+                    []
+                  );
                 }}
               >
-                <Text style={styles.modalClose}>✕</Text>
+                <Text
+                  style={
+                    styles.modalClose
+                  }
+                >
+                  ✕
+                </Text>
               </TouchableOpacity>
             </View>
 
-            
-            <Text style={styles.toLabel}>
+            <Text
+              style={styles.toLabel}
+            >
               To:{' '}
-              <Text style={styles.toEmail}>{incomingEmail}</Text>
+              <Text
+                style={
+                  styles.toEmail
+                }
+              >
+                {incomingEmail}
+              </Text>
             </Text>
 
-            
             <TextInput
-              style={styles.messageInput}
+              style={
+                styles.messageInput
+              }
               placeholder="Type your message here..."
               placeholderTextColor="#999"
               multiline
               numberOfLines={5}
               value={messageText}
-              onChangeText={setMessageText}
+              onChangeText={
+                setMessageText
+              }
               textAlignVertical="top"
             />
 
-            
-            {selectedFiles.length > 0 && (
+            {selectedFiles.length >
+              0 && (
               <ScrollView
                 horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.filePreviewScroll}
+                showsHorizontalScrollIndicator={
+                  false
+                }
+                style={
+                  styles.filePreviewScroll
+                }
               >
-                {selectedFiles.map((file, index) => (
-                  <View key={index} style={styles.filePreviewItem}>
-                    <Image
-                      source={{ uri: file.uri }}
-                      style={styles.filePreviewImage}
-                    />
-                    <TouchableOpacity
-                      style={styles.removeFileBtn}
-                      onPress={() => removeFile(index)}
+                {selectedFiles.map(
+                  (
+                    file,
+                    index
+                  ) => (
+                    <View
+                      key={index}
+                      style={
+                        styles.filePreviewItem
+                      }
                     >
-                      <Text style={styles.removeFileBtnText}>✕</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.filePreviewName} numberOfLines={1}>
-                      {file.name}
-                    </Text>
-                  </View>
-                ))}
+                      <Image
+                        source={{
+                          uri: file.uri,
+                        }}
+                        style={
+                          styles.filePreviewImage
+                        }
+                      />
+
+                      <TouchableOpacity
+                        style={
+                          styles.removeFileBtn
+                        }
+                        onPress={() =>
+                          removeFile(
+                            index
+                          )
+                        }
+                      >
+                        <Text
+                          style={
+                            styles.removeFileBtnText
+                          }
+                        >
+                          ✕
+                        </Text>
+                      </TouchableOpacity>
+
+                      <Text
+                        style={
+                          styles.filePreviewName
+                        }
+                        numberOfLines={
+                          1
+                        }
+                      >
+                        {file.name}
+                      </Text>
+                    </View>
+                  )
+                )}
               </ScrollView>
             )}
 
-            
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.uploadBtn} onPress={pickFiles}>
-                <Text style={styles.uploadBtnText}>📎 Attach Files</Text>
+            <View
+              style={
+                styles.modalActions
+              }
+            >
+              <TouchableOpacity
+                style={
+                  styles.uploadBtn
+                }
+                onPress={
+                  pickFiles
+                }
+              >
+                <Text
+                  style={
+                    styles.uploadBtnText
+                  }
+                >
+                  📎 Attach Files
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.sendBtn, sending && { opacity: 0.6 }]}
-                onPress={sendToCustomer}
+                style={[
+                  styles.sendBtn,
+                  sending && {
+                    opacity: 0.6,
+                  },
+                ]}
+                onPress={
+                  sendToCustomer
+                }
                 disabled={sending}
               >
                 {sending ? (
-                  <ActivityIndicator color="#000" />
+                  <ActivityIndicator
+                    color="#000"
+                  />
                 ) : (
-                  <Text style={styles.sendBtnText}>Send to Customer</Text>
+                  <Text
+                    style={
+                      styles.sendBtnText
+                    }
+                  >
+                    Send to Customer
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -561,57 +1260,118 @@ console.log('Selected files before upload:', selectedFiles);
       </Modal>
 
       {/* FOOTER */}
-      <Footer appSupportTeamMember={appSupportTeamMember} currentRoute={currentRoute} />
+
+      <Footer
+        appSupportTeamMember={
+          appSupportTeamMember
+        }
+        currentRoute={
+          currentRoute
+        }
+      />
     </ImageBackground>
   );
 };
 
 export default ViewTicketDetail;
 
+/* =========================================================
+   STYLES
+========================================================= */
+
 const styles = StyleSheet.create({
-  background: { flex: 1 },
+  background: {
+    flex: 1,
+  },
+
   container: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 60 : 20,
+    paddingTop:
+      Platform.OS === 'android'
+        ? 60
+        : 20,
     backgroundColor: '#fff',
   },
+
   flexClass: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent:
+      'space-between',
     alignItems: 'center',
     marginBottom: 26,
   },
-  logoSyil: { width: 87.6, height: 24 },
-  ticketIcon: { width: 26.88, height: 21.88 },
+
+  logoSyil: {
+    width: 87.6,
+    height: 24,
+  },
+
+  ticketIcon: {
+    width: 26.88,
+    height: 21.88,
+  },
+
   initialsAvatar: {
     width: 30,
     height: 30,
     backgroundColor: '#000',
     borderRadius: 100,
-    justifyContent: 'center',
+    justifyContent:
+      'center',
     alignItems: 'center',
   },
-  initialsText: { fontSize: 14, fontWeight: '500', color: '#FFEA00' },
+
+  initialsText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#FFEA00',
+  },
+
   messageBubble: {
     padding: 10,
     marginVertical: 4,
     borderRadius: 8,
     maxWidth: '90%',
   },
+
   incoming: {
     backgroundColor: '#FFEA00',
     alignSelf: 'flex-end',
   },
+
   outgoing: {
     backgroundColor: '#e5e5e5',
     alignSelf: 'flex-start',
   },
-  senderName: { fontWeight: '600', marginBottom: 4, color: '#333' },
-  messageText: { color: '#000' },
-  noTicketText: { textAlign: 'center', marginTop: 20, color: '#999' },
-  subject: { fontSize: 24, fontWeight: '700', marginBottom: 2 },
-  ticket: { fontSize: 14, fontWeight: '400', marginBottom: 10 },
+
+  senderName: {
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#333',
+  },
+
+  messageText: {
+    color: '#000',
+  },
+
+  noTicketText: {
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#999',
+  },
+
+  subject: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+
+  ticket: {
+    fontSize: 14,
+    fontWeight: '400',
+    marginBottom: 10,
+  },
 
   ReplyStyle: {
     backgroundColor: '#000',
@@ -621,26 +1381,39 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     textAlign: 'center',
   },
-  refreshIcon: { width: 15, height: 16, marginRight: 5 },
+
+  refreshIcon: {
+    width: 15,
+    height: 16,
+    marginRight: 5,
+  },
+
   attachmentImage: {
     width: '85%',
     height: 200,
     objectFit: 'contain',
     resizeMode: 'contain',
   },
-   video: {
-  width: '100%',
-  height: 220,
-  borderRadius: 8,
-  marginTop: 5,
-},
 
-  // ✅ Modal Styles
+  video: {
+    width: '100%',
+    height: 220,
+    borderRadius: 8,
+    marginTop: 5,
+  },
+
+  /* =======================================================
+     MODAL STYLES
+  ======================================================= */
+
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor:
+      'rgba(0,0,0,0.5)',
+    justifyContent:
+      'flex-end',
   },
+
   modalContainer: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
@@ -649,16 +1422,38 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     maxHeight: '85%',
   },
+
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent:
+      'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
-  modalClose: { fontSize: 18, color: '#666', padding: 4 },
-  toLabel: { fontSize: 13, color: '#666', marginBottom: 10 },
-  toEmail: { color: '#000', fontWeight: '600' },
+
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+  },
+
+  modalClose: {
+    fontSize: 18,
+    color: '#666',
+    padding: 4,
+  },
+
+  toLabel: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 10,
+  },
+
+  toEmail: {
+    color: '#000',
+    fontWeight: '600',
+  },
+
   messageInput: {
     borderWidth: 1,
     borderColor: '#ddd',
@@ -669,42 +1464,59 @@ const styles = StyleSheet.create({
     minHeight: 120,
     marginBottom: 12,
   },
-  filePreviewScroll: { marginBottom: 12 },
+
+  filePreviewScroll: {
+    marginBottom: 12,
+  },
+
   filePreviewItem: {
     marginRight: 10,
     position: 'relative',
     alignItems: 'center',
   },
+
   filePreviewImage: {
     width: 80,
     height: 80,
     borderRadius: 8,
     backgroundColor: '#eee',
   },
+
   removeFileBtn: {
     position: 'absolute',
     top: 0,
     right: 0,
-    backgroundColor: '#ff4444',
+    backgroundColor:
+      '#ff4444',
     borderRadius: 10,
     width: 20,
     height: 20,
-    justifyContent: 'center',
+    justifyContent:
+      'center',
     alignItems: 'center',
   },
-  removeFileBtnText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+
+  removeFileBtnText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+
   filePreviewName: {
     fontSize: 10,
     color: '#666',
     marginTop: 4,
     maxWidth: 80,
   },
+
   modalActions: {
     flexDirection: 'column',
-    justifyContent: 'space-between',
+    justifyContent:
+      'space-between',
     alignItems: 'center',
     gap: 10,
   },
+
   uploadBtn: {
     width: '100%',
     borderWidth: 1,
@@ -713,13 +1525,25 @@ const styles = StyleSheet.create({
     padding: 14,
     alignItems: 'center',
   },
-  uploadBtnText: { color: '#000', fontWeight: '600', fontSize: 14 },
+
+  uploadBtnText: {
+    color: '#000',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
   sendBtn: {
     width: '100%',
-    backgroundColor: '#FFEA00',
+    backgroundColor:
+      '#FFEA00',
     borderRadius: 8,
     padding: 14,
     alignItems: 'center',
   },
-  sendBtnText: { color: '#000', fontWeight: '700', fontSize: 14 },
+
+  sendBtnText: {
+    color: '#000',
+    fontWeight: '700',
+    fontSize: 14,
+  },
 });

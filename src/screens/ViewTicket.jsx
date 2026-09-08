@@ -115,8 +115,16 @@ const ViewTicket = ({ navigation }) => {
                     }),
                     });
 
+                    // const data = await response.json();
+                    // setTickets(data.tickets || []);
+
                     const data = await response.json();
-                    setTickets(data.tickets || []);
+
+const sortedTickets = (data.tickets || []).sort(
+    (a, b) => new Date(b.createdDate) - new Date(a.createdDate)
+);
+
+setTickets(sortedTickets);
                     setLoading(false);
                 } catch (error) {
                     console.log('Ticket fetch error', error);
@@ -379,7 +387,7 @@ const ViewTicket = ({ navigation }) => {
                     showsVerticalScrollIndicator={false}
                     keyExtractor={(item) => item.ticketId}
                     //contentContainerStyle={{ paddingBottom: 200, }}
-                    contentContainerStyle={{ paddingBottom: 420, paddingTop: 0, flexDirection: 'column-reverse',}}
+                    contentContainerStyle={{ paddingBottom: 420, paddingTop: 0, }}
                     //ListFooterComponent={<View style={{ height: 290 }} />}
                     renderItem={({ item }) => (
                     <Pressable
@@ -391,16 +399,10 @@ const ViewTicket = ({ navigation }) => {
                         }
                     >
                         <View style={styles.tableRow}>
-
-                            <Text style={styles.cellID}>
+                            <View style={styles.cellID}>
+                            <Text style={styles.cellIDText}>
                                 #{item.ticketId}
                             </Text>
-
-                            <View style={styles.subjectCell}>
-                                <Text style={styles.cell}>
-                                    {item.subject}
-                                </Text>
-
                                 {Number(item.dealer_unread_count || 0) > 0 && (
                                     <View style={styles.unreadBadge}>
                                         <Text style={styles.unreadBadgeText}>
@@ -408,7 +410,13 @@ const ViewTicket = ({ navigation }) => {
                                         </Text>
                                     </View>
                                 )}
+                            
                             </View>
+
+                            <Text style={styles.cell}>
+                                {item.subject}
+                            </Text>
+                            
 
                             <Text style={styles.cell}>
                                 {formatDate(item.createdDate)}
@@ -493,8 +501,11 @@ const styles = StyleSheet.create({
         color: '#333',
         padding:5,
         fontWeight:700,
+        flexDirection:'row',alignContent:'center',
     },
-
+    cellIDText:{
+        flexShrink:1,
+    },
     cell: {
         flex: '0 0 25%',
         width:'25%',

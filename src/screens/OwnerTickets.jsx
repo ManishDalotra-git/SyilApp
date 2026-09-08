@@ -129,7 +129,12 @@ console.log('Final senderActorId:', senderActorId);
           const data = await response.json();
           console.log('data---- ', data);
           
-          setTickets(data.tickets || []);
+          const sortedTickets = (data.tickets || []).sort(
+            (a, b) => new Date(b.createdDate) - new Date(a.createdDate)
+          );
+
+          setTickets(sortedTickets);
+
           setLoading(false);
 
         } catch (error) {
@@ -362,7 +367,6 @@ console.log('Final senderActorId:', senderActorId);
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{
                 paddingBottom: 300,
-                flexDirection: 'column-reverse',
               }}
               renderItem={({ item }) => (
                 <Pressable
@@ -375,15 +379,10 @@ console.log('Final senderActorId:', senderActorId);
                 >
                   <View style={styles.tableRow}>
 
-                    <Text style={styles.cellID}>
-                        #{item.ticketId}
-                    </Text>
-
-                    <View style={styles.subjectCell}>
-                        <Text style={styles.cell}>
-                            {item.subject}
+                    <View style={styles.cellID}>
+                        <Text style={styles.cellIDText}>
+                            #{item.ticketId}
                         </Text>
-
                         {Number(item.dealer_unread_count || 0) > 0 && (
                             <View style={styles.unreadBadge}>
                                 <Text style={styles.unreadBadgeText}>
@@ -392,6 +391,8 @@ console.log('Final senderActorId:', senderActorId);
                             </View>
                         )}
                     </View>
+
+                    <Text style={styles.cell}>{item.subject}</Text>
 
                     <Text style={styles.cell}>
                         {formatDate(item.createdDate)}
@@ -475,6 +476,10 @@ const styles = StyleSheet.create({
         color: '#333',
         padding:5,
         fontWeight:700,
+        flexDirection:'row',alignContent:'center',
+    },
+    cellIDText:{
+        flexShrink:1,
     },
 
     cell: {

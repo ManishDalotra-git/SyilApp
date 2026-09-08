@@ -947,10 +947,17 @@ app.post('/get-user-data', async (req, res) => {
 
 
 // Step 3: check login details in hubspot
+// ============================================================
+// CHECK LOGIN DETAILS IN HUBSPOT
+// ============================================================
 app.post('/check_login_detail', async (req, res) => {
   const { email, password } = req.body;
-  console.log('email---- ' , email);
-  console.log(HUBSPOT_API_KEY);
+
+  console.log('==========================================');
+  console.log('LOGIN REQUEST');
+  console.log('Email:', email);
+  console.log('==========================================');
+
   if (!email || !password) {
     return res.status(400).json({
       message: 'Email and password are required',
@@ -959,17 +966,25 @@ app.post('/check_login_detail', async (req, res) => {
 
   try {
     const fetch = (...args) =>
-      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+      import('node-fetch').then(
+        ({ default: fetch }) => fetch(...args)
+      );
 
-    // 1️⃣ SEARCH CONTACT BY EMAIL
+    // ========================================================
+    // 1. SEARCH CONTACT BY EMAIL
+    // ========================================================
+    const normalizedEmail = email.trim().toLowerCase();
+
     const searchResponse = await fetch(
       'https://api.hubapi.com/crm/v3/objects/contacts/search',
       {
         method: 'POST',
+
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
         },
+
         body: JSON.stringify({
           filterGroups: [
             {
@@ -977,68 +992,180 @@ app.post('/check_login_detail', async (req, res) => {
                 {
                   propertyName: 'email',
                   operator: 'EQ',
-                  value: email,
+                  value: normalizedEmail,
                 },
               ],
             },
           ],
-          properties: ['email', 'mobile_password', 'firstname', 'lastname', 'profile_image', 'bio', 'phone', 'gender', 'app_support_team_member'],
+
+          properties: [
+            'email',
+            'mobile_password',
+            'firstname',
+            'lastname',
+            'profile_image',
+            'hs_avatar_url',
+            'bio',
+            'phone',
+            'gender',
+            'app_support_team_member',
+            'mobile_app_permission',
+          ],
+
+          limit: 1,
         }),
       }
     );
 
     const searchData = await searchResponse.json();
 
-    // EMAIL NOT FOUND
-    if (!searchData.results || searchData.results.length === 0) {
+    console.log(
+      'HubSpot login search status:',
+      searchResponse.status
+    );
+
+    // ========================================================
+    // 2. EMAIL NOT FOUND
+    // ========================================================
+    if (
+      !searchResponse.ok ||
+      !searchData.results ||
+      searchData.results.length === 0
+    ) {
+      console.log('LOGIN FAILED: Email not found');
+
       return res.status(401).json({
-        message: 'Invalid email, please enter your valid email',
+        message:
+          'Invalid email, please enter your valid email',
       });
     }
 
-    // CONTACT FOUND
+    // ========================================================
+    // 3. CONTACT FOUND
+    // ========================================================
     const contact = searchData.results[0];
+
     const contactId = contact.id;
-    const hubspotPassword = contact.properties.mobile_password;
 
-    // PASSWORD NOT SET
+    const properties = contact.properties || {};
+
+    const hubspotPassword =
+      properties.mobile_password || '';
+
+    const mobileAppPermission =
+      String(
+        properties.mobile_app_permission ?? ''
+      )
+        .trim()
+        .toLowerCase();
+
+    console.log('Contact ID:', contactId);
+
+    console.log(
+      'Mobile App Permission:',
+      properties.mobile_app_permission
+    );
+
+    // ========================================================
+    // 4. PASSWORD NOT SET
+    // ========================================================
     if (!hubspotPassword) {
+      console.log(
+        'LOGIN FAILED: Password not set'
+      );
+
       return res.status(401).json({
-        message: 'Password not set for this account',
+        message:
+          'Password not set for this account',
       });
     }
 
-    // PASSWORD DOES NOT MATCH
+    // ========================================================
+    // 5. PASSWORD CHECK
+    // ========================================================
     if (hubspotPassword !== password) {
+      console.log(
+        'LOGIN FAILED: Invalid password'
+      );
+
       return res.status(401).json({
-        message: 'Please enter a valid password',
+        message:
+          'Please enter a valid password',
       });
     }
 
-    // LOGIN SUCCESS
+    // ========================================================
+    // 6. DEALER APP PERMISSION CHECK
+    // ========================================================
+    if (mobileAppPermission !== 'dealer app') {
+      console.log(
+        'LOGIN FAILED: User does not have Dealer App permission'
+      );
+
+      return res.status(403).json({
+        message:
+          'You are not authorized to use the Dealer App.',
+        code:
+          'DEALER_APP_PERMISSION_REQUIRED',
+      });
+    }
+
+    // ========================================================
+    // 7. LOGIN SUCCESS
+    // ========================================================
+    console.log(
+      'LOGIN SUCCESS: Dealer App permission verified'
+    );
+
     return res.status(200).json({
       message: 'Login successful',
+
       contactId: contactId,
+
       user: {
-        email: contact.properties.email,
-        firstName: contact.properties.firstname || '',
-        lastName: contact.properties.lastname || '',
-        profileImage: contact.properties.hs_avatar_url || '',
-        bio: contact.properties.bio || '',
-        phone: contact.properties.phone || '',
-        gender: contact.properties.gender || '',
-        app_support_team_member: contact.properties.app_support_team_member || '',
+        email:
+          properties.email || normalizedEmail,
+
+        firstName:
+          properties.firstname || '',
+
+        lastName:
+          properties.lastname || '',
+
+        profileImage:
+          properties.hs_avatar_url ||
+          properties.profile_image ||
+          '',
+
+        bio:
+          properties.bio || '',
+
+        phone:
+          properties.phone || '',
+
+        gender:
+          properties.gender || '',
+
+        app_support_team_member:
+          properties.app_support_team_member || '',
+
+        mobile_app_permission:
+          properties.mobile_app_permission || '',
       },
     });
 
   } catch (error) {
-    console.error('Login Error:', error);
+
+    console.error(
+      'Login Error:',
+      error
+    );
+
     return res.status(500).json({
       message: 'Internal server error',
     });
   }
 });
-
 
 // Step 3: Forgot Password
 app.post('/forgot_password', async (req, res) => {
