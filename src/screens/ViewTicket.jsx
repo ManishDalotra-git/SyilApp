@@ -391,19 +391,35 @@ const ViewTicket = ({ navigation }) => {
                         }
                     >
                         <View style={styles.tableRow}>
-                            <Text style={styles.cellID}>#{item.ticketId}</Text>
-                            <Text style={styles.cell}>{item.subject}</Text>
-                            <Text style={styles.cell}>{formatDate(item.createdDate)}</Text>
-                            <Text
-                            style={styles.cell}
-                            // style={[
-                            //     styles.cell,
-                            //     item.status === '173580713' && styles.closedStatus,
-                            // ]}
-                            >
-                            {getStatusText(item.ownerId)}
+
+                            <Text style={styles.cellID}>
+                                #{item.ticketId}
                             </Text>
+
+                            <View style={styles.subjectCell}>
+                                <Text style={styles.cell}>
+                                    {item.subject}
+                                </Text>
+
+                                {Number(item.dealer_unread_count || 0) > 0 && (
+                                    <View style={styles.unreadBadge}>
+                                        <Text style={styles.unreadBadgeText}>
+                                            {item.dealer_unread_count}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+
+                            <Text style={styles.cell}>
+                                {formatDate(item.createdDate)}
+                            </Text>
+
+                            <Text style={styles.cell}>
+                                {getStatusText(item.ownerId)}
+                            </Text>
+
                         </View>
+
                     </Pressable>
 
                     )}
@@ -486,6 +502,38 @@ const styles = StyleSheet.create({
         color: '#333',
         padding:5,
     },
+
+
+    subjectCell: {
+    flex: '0 0 25%',
+    width: '25%',
+    padding: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+},
+
+unreadBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFEA00',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    marginLeft: 4,
+},
+
+unreadBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#000',
+},
+
+
+
+
+
 
     headerText: {
         fontWeight: '600',

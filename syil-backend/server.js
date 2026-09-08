@@ -1410,6 +1410,1748 @@ app.post('/update-profile', async (req, res) => {
 // });
 
 
+
+
+
+
+
+
+
+// ============================================================
+// DEALER UNREAD HELPERS
+// ============================================================
+
+async function getDealerTotalUnreadCount(contactId, fetch) {
+  try {
+    if (!contactId) {
+      return 0;
+    }
+
+    const associationResponse = await fetch(
+      `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}/associations/ticket`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const associationData =
+      await associationResponse.json();
+
+    if (!associationResponse.ok) {
+      console.error(
+        'Dealer ticket association error:',
+        associationData
+      );
+
+      return 0;
+    }
+
+    const ticketIds =
+      (associationData.results || [])
+        .map(item => String(item.id))
+        .filter(Boolean);
+
+    if (!ticketIds.length) {
+      return 0;
+    }
+
+    const ticketRequests =
+      ticketIds.map(ticketId =>
+        fetch(
+          `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=customer_portal,dealer_unread_count`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization:
+                `Bearer ${HUBSPOT_API_KEY}`,
+              'Content-Type':
+                'application/json',
+            },
+          }
+        ).then(response =>
+          response.json()
+        )
+      );
+
+    const tickets =
+      await Promise.all(ticketRequests);
+
+    const totalUnreadCount =
+      tickets.reduce(
+        (total, ticket) => {
+          const portalValue =
+            String(
+              ticket.properties
+                ?.customer_portal || ''
+            )
+              .trim()
+              .toLowerCase();
+
+          const customerPortal =
+            portalValue === 'true' ||
+            portalValue === 'yes' ||
+            portalValue === '1';
+
+          if (customerPortal) {
+            return total;
+          }
+
+          return (
+            total +
+            Number(
+              ticket.properties
+                ?.dealer_unread_count || 0
+            )
+          );
+        },
+        0
+      );
+
+    return totalUnreadCount;
+
+  } catch (error) {
+    console.error(
+      'getDealerTotalUnreadCount error:',
+      error
+    );
+
+    return 0;
+  }
+}
+
+
+async function getSupportOwnerTotalUnreadCount(
+  ownerId,
+  fetch
+) {
+  try {
+    if (!ownerId) {
+      return 0;
+    }
+
+    let allTickets = [];
+    let after = null;
+
+    do {
+      const response = await fetch(
+        'https://api.hubapi.com/crm/v3/objects/tickets/search',
+        {
+          method: 'POST',
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName:
+                      'hubspot_owner_id',
+                    operator: 'EQ',
+                    value: String(ownerId),
+                  },
+                ],
+              },
+            ],
+
+            properties: [
+              'dealer_unread_count',
+              'customer_portal',
+            ],
+
+            limit: 100,
+
+            ...(after
+              ? { after }
+              : {}),
+          }),
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        console.error(
+          'Support owner unread search error:',
+          data
+        );
+
+        break;
+      }
+
+      allTickets = [
+        ...allTickets,
+        ...(data.results || []),
+      ];
+
+      after =
+        data?.paging?.next?.after ||
+        null;
+
+    } while (after);
+
+    const totalUnreadCount =
+      allTickets.reduce(
+        (total, ticket) => {
+          const portalValue =
+            String(
+              ticket.properties
+                ?.customer_portal || ''
+            )
+              .trim()
+              .toLowerCase();
+
+          const customerPortal =
+            portalValue === 'true' ||
+            portalValue === 'yes' ||
+            portalValue === '1';
+
+          if (customerPortal) {
+            return total;
+          }
+
+          return (
+            total +
+            Number(
+              ticket.properties
+                ?.dealer_unread_count || 0
+            )
+          );
+        },
+        0
+      );
+
+    return totalUnreadCount;
+
+  } catch (error) {
+    console.error(
+      'getSupportOwnerTotalUnreadCount error:',
+      error
+    );
+
+    return 0;
+  }
+}
+
+
+
+
+
+// ============================================================
+// HUBSPOT CONVERSATION WEBHOOK
+// ============================================================
+
+app.post('/hubspot-webhook', async (req, res) => {
+
+  /*
+   * HubSpot ko immediately 200 response dena important hai.
+   * Isse webhook unnecessary retry nahi karega.
+   */
+  res.sendStatus(200);
+
+  try {
+
+    console.log(
+      '========== HUBSPOT WEBHOOK RECEIVED =========='
+    );
+
+    console.log(
+      'Webhook body:',
+      JSON.stringify(req.body, null, 2)
+    );
+
+    const events =
+      Array.isArray(req.body)
+        ? req.body
+        : [];
+
+    if (!events.length) {
+      console.log(
+        'Webhook body is empty'
+      );
+      return;
+    }
+
+    /*
+     * HubSpot webhook event.
+     */
+    const event = events[0];
+
+    const threadId =
+      event.objectId;
+
+    const webhookMessageId =
+      event.messageId;
+
+    console.log(
+      'Thread ID:',
+      threadId
+    );
+
+    console.log(
+      'Webhook Message ID:',
+      webhookMessageId
+    );
+
+    console.log(
+      'Subscription Type:',
+      event.subscriptionType
+    );
+
+    if (
+      !threadId ||
+      !webhookMessageId
+    ) {
+      console.log(
+        'Thread ID or webhook message ID missing'
+      );
+
+      return;
+    }
+
+    const fetch = (...args) =>
+      import('node-fetch').then(
+        ({ default: fetch }) =>
+          fetch(...args)
+      );
+
+
+    // ========================================================
+    // STEP 1
+    // GET THREAD MESSAGES
+    // ========================================================
+
+    const messagesResponse =
+      await fetch(
+        `https://api.hubapi.com/conversations/v3/conversations/threads/${threadId}/messages`,
+        {
+          method: 'GET',
+
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type':
+              'application/json',
+          },
+        }
+      );
+
+    const messagesData =
+      await messagesResponse.json();
+
+    console.log(
+      'HubSpot messages status:',
+      messagesResponse.status
+    );
+
+    if (!messagesResponse.ok) {
+
+      console.error(
+        'HubSpot messages API error:',
+        JSON.stringify(
+          messagesData,
+          null,
+          2
+        )
+      );
+
+      return;
+    }
+
+    const availableMessages =
+      messagesData.results || [];
+
+    /*
+     * Exact webhook message find karo.
+     */
+    const latestMessage =
+      availableMessages.find(
+        message =>
+          message.type === 'MESSAGE' &&
+          String(message.id) ===
+            String(webhookMessageId)
+      );
+
+    if (!latestMessage) {
+
+      console.log(
+        'Exact webhook message not found in thread'
+      );
+
+      return;
+    }
+
+    console.log(
+      'Matched message direction:',
+      latestMessage.direction
+    );
+
+    console.log(
+      'Matched message text:',
+      latestMessage.text
+    );
+
+
+    // ========================================================
+    // STEP 2
+    // ONLY MESSAGE EVENTS
+    // ========================================================
+
+    const allowedDirections = [
+      'INCOMING',
+      'OUTGOING',
+    ];
+
+    if (
+      !allowedDirections.includes(
+        latestMessage.direction
+      )
+    ) {
+
+      console.log(
+        `Notification skipped because direction is ${latestMessage.direction}`
+      );
+
+      return;
+    }
+
+
+    // ========================================================
+    // STEP 3
+    // FIND TICKET USING THREAD ID
+    // ========================================================
+
+    const ticketSearchResponse =
+      await fetch(
+        'https://api.hubapi.com/crm/v3/objects/tickets/search',
+        {
+          method: 'POST',
+
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type':
+              'application/json',
+          },
+
+          body: JSON.stringify({
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName:
+                      'hs_conversations_originating_thread_id',
+
+                    operator:
+                      'EQ',
+
+                    value:
+                      String(threadId),
+                  },
+                ],
+              },
+            ],
+
+            properties: [
+              'subject',
+              'customer_portal',
+              'hs_conversations_originating_thread_id',
+              'dealer_unread_count',
+              'hubspot_owner_id',
+            ],
+
+            limit: 1,
+          }),
+        }
+      );
+
+    const ticketSearchData =
+      await ticketSearchResponse.json();
+
+    console.log(
+      'Ticket search status:',
+      ticketSearchResponse.status
+    );
+
+    if (!ticketSearchResponse.ok) {
+
+      console.error(
+        'Ticket search error:',
+        JSON.stringify(
+          ticketSearchData,
+          null,
+          2
+        )
+      );
+
+      return;
+    }
+
+    if (
+      !ticketSearchData.results?.length
+    ) {
+
+      console.log(
+        'No ticket found for thread:',
+        threadId
+      );
+
+      return;
+    }
+
+    const matchedTicket =
+      ticketSearchData.results[0];
+
+    const ticketId =
+      String(matchedTicket.id);
+
+    const ticketSubject =
+      matchedTicket.properties
+        ?.subject || '';
+
+    const ticketOwnerId =
+      String(
+        matchedTicket.properties
+          ?.hubspot_owner_id || ''
+      );
+
+    console.log(
+      'Matched Ticket ID:',
+      ticketId
+    );
+
+    console.log(
+      'Ticket Subject:',
+      ticketSubject
+    );
+
+    console.log(
+      'Ticket HubSpot Owner ID:',
+      ticketOwnerId ||
+        'Not assigned'
+    );
+
+
+    // ========================================================
+    // STEP 4
+    // CUSTOMER PORTAL CHECK
+    // ========================================================
+
+    const rawCustomerPortal =
+      matchedTicket.properties
+        ?.customer_portal;
+
+    const normalizedCustomerPortal =
+      String(
+        rawCustomerPortal ?? ''
+      )
+        .trim()
+        .toLowerCase();
+
+    const isCustomerPortalTicket =
+      rawCustomerPortal === true ||
+      normalizedCustomerPortal === 'true' ||
+      normalizedCustomerPortal === 'yes' ||
+      normalizedCustomerPortal === '1';
+
+    console.log(
+      'customer_portal raw value:',
+      rawCustomerPortal
+    );
+
+    console.log(
+      'Is customer portal ticket:',
+      isCustomerPortalTicket
+    );
+
+    /*
+     * Customer Portal ticket Dealer App
+     * notification ke liye process nahi hoga.
+     */
+    if (
+      isCustomerPortalTicket
+    ) {
+
+      console.log(
+        'Dealer push skipped: customer_portal is true'
+      );
+
+      return;
+    }
+
+    console.log(
+      'Dealer ticket confirmed'
+    );
+
+
+    // ========================================================
+    // STEP 5
+    // FIND TICKET OWNER EMAIL
+    // ========================================================
+
+    let ticketOwnerEmail = '';
+
+    if (ticketOwnerId) {
+
+      try {
+
+        const ownerResponse =
+          await fetch(
+            `https://api.hubapi.com/crm/v3/owners/${ticketOwnerId}`,
+            {
+              method: 'GET',
+
+              headers: {
+                Authorization:
+                  `Bearer ${HUBSPOT_API_KEY}`,
+                'Content-Type':
+                  'application/json',
+              },
+            }
+          );
+
+        const ownerData =
+          await ownerResponse.json();
+
+        if (ownerResponse.ok) {
+
+          ticketOwnerEmail =
+            ownerData.email
+              ?.trim()
+              ?.toLowerCase() || '';
+
+          console.log(
+            'Ticket Owner Email:',
+            ticketOwnerEmail ||
+              'Not available'
+          );
+
+        } else {
+
+          console.error(
+            'Ticket owner fetch failed:',
+            ownerData
+          );
+        }
+
+      } catch (error) {
+
+        console.error(
+          'Ticket owner fetch error:',
+          error
+        );
+      }
+    }
+
+
+    // ========================================================
+    // STEP 6
+    // TICKET UNREAD COUNT + 1
+    // ========================================================
+
+    const currentTicketUnreadCount =
+      Number(
+        matchedTicket.properties
+          ?.dealer_unread_count || 0
+      );
+
+    const newTicketUnreadCount =
+      currentTicketUnreadCount + 1;
+
+    console.log(
+      `Ticket ${ticketId} unread: ${currentTicketUnreadCount} -> ${newTicketUnreadCount}`
+    );
+
+    const ticketUnreadUpdateResponse =
+      await fetch(
+        `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}`,
+        {
+          method: 'PATCH',
+
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type':
+              'application/json',
+          },
+
+          body: JSON.stringify({
+            properties: {
+              dealer_unread_count:
+                String(
+                  newTicketUnreadCount
+                ),
+            },
+          }),
+        }
+      );
+
+    const ticketUnreadUpdateText =
+      await ticketUnreadUpdateResponse.text();
+
+    if (
+      !ticketUnreadUpdateResponse.ok
+    ) {
+
+      console.error(
+        'Ticket unread count update failed:',
+        ticketUnreadUpdateText
+      );
+
+      return;
+    }
+
+    console.log(
+      'Ticket unread count updated successfully:',
+      newTicketUnreadCount
+    );
+
+
+    // ========================================================
+    // STEP 7
+    // IDENTIFY MESSAGE SENDER
+    // ========================================================
+
+    const senderEmail =
+      latestMessage.senders?.[0]
+        ?.deliveryIdentifier
+        ?.value
+        ?.trim()
+        ?.toLowerCase() || '';
+
+    console.log(
+      'Message sender email:',
+      senderEmail ||
+        'Not available'
+    );
+
+    let senderIsSupport =
+      false;
+
+    let senderContactName =
+      '';
+
+    let senderContactFound =
+      false;
+
+
+    if (senderEmail) {
+
+      const senderSearchResponse =
+        await fetch(
+          'https://api.hubapi.com/crm/v3/objects/contacts/search',
+          {
+            method: 'POST',
+
+            headers: {
+              Authorization:
+                `Bearer ${HUBSPOT_API_KEY}`,
+              'Content-Type':
+                'application/json',
+            },
+
+            body: JSON.stringify({
+              filterGroups: [
+                {
+                  filters: [
+                    {
+                      propertyName:
+                        'email',
+
+                      operator:
+                        'EQ',
+
+                      value:
+                        senderEmail,
+                    },
+                  ],
+                },
+              ],
+
+              properties: [
+                'email',
+                'firstname',
+                'lastname',
+                'app_support_team_member',
+              ],
+
+              limit: 1,
+            }),
+          }
+        );
+
+      const senderSearchData =
+        await senderSearchResponse.json();
+
+      console.log(
+        'Sender contact search status:',
+        senderSearchResponse.status
+      );
+
+      if (
+        senderSearchResponse.ok &&
+        senderSearchData.results?.length
+      ) {
+
+        senderContactFound =
+          true;
+
+        const senderContact =
+          senderSearchData.results[0];
+
+        const supportValue =
+          String(
+            senderContact.properties
+              ?.app_support_team_member ??
+              ''
+          )
+            .trim()
+            .toLowerCase();
+
+        senderIsSupport =
+          supportValue === 'yes';
+
+        senderContactName = [
+          senderContact.properties
+            ?.firstname,
+
+          senderContact.properties
+            ?.lastname,
+        ]
+          .filter(Boolean)
+          .join(' ');
+
+        console.log(
+          'app_support_team_member:',
+          supportValue ||
+            'empty'
+        );
+
+      } else {
+
+        console.log(
+          'Sender contact not found in HubSpot'
+        );
+      }
+    }
+
+
+    /*
+     * Direction fallback.
+     */
+    if (!senderContactFound) {
+
+      senderIsSupport =
+        latestMessage.direction ===
+        'OUTGOING';
+
+      console.log(
+        'Using message direction as sender-role fallback'
+      );
+    }
+
+    /*
+     * Existing iOS logic:
+     * OUTGOING = support
+     * INCOMING = customer
+     */
+    senderIsSupport =
+      latestMessage.direction ===
+      'OUTGOING';
+
+    const senderRole =
+      senderIsSupport
+        ? 'support'
+        : 'customer';
+
+    const senderName =
+      senderContactName ||
+      latestMessage.senders?.[0]
+        ?.name ||
+      senderEmail ||
+      (
+        senderIsSupport
+          ? 'SYIL Support'
+          : 'Customer'
+      );
+
+    const notificationTitle =
+      senderIsSupport
+        ? `New reply from ${senderName}`
+        : `New message from ${senderName}`;
+
+    const notificationBody =
+      latestMessage.text
+        ?.trim() ||
+      (
+        senderIsSupport
+          ? 'You received a new reply from SYIL Support.'
+          : 'You received a new customer message.'
+      );
+
+    console.log(
+      'Sender role:',
+      senderRole
+    );
+
+    console.log(
+      'Sender name:',
+      senderName
+    );
+
+    console.log(
+      'Notification title:',
+      notificationTitle
+    );
+
+
+    // ========================================================
+    // STEP 8
+    // FIND NOTIFICATION RECIPIENT
+    // ========================================================
+
+    let dealerRecipients = [];
+
+
+    // --------------------------------------------------------
+    // CASE 1
+    // CUSTOMER -> TICKET OWNER
+    // --------------------------------------------------------
+
+    if (
+      latestMessage.direction ===
+      'INCOMING'
+    ) {
+
+      console.log(
+        'Incoming customer message: finding Ticket Owner'
+      );
+
+      if (!ticketOwnerEmail) {
+
+        console.log(
+          'Push skipped: Ticket owner email missing'
+        );
+
+        return;
+      }
+
+      const ownerContactSearchResponse =
+        await fetch(
+          'https://api.hubapi.com/crm/v3/objects/contacts/search',
+          {
+            method: 'POST',
+
+            headers: {
+              Authorization:
+                `Bearer ${HUBSPOT_API_KEY}`,
+              'Content-Type':
+                'application/json',
+            },
+
+            body: JSON.stringify({
+              filterGroups: [
+                {
+                  filters: [
+                    {
+                      propertyName:
+                        'email',
+
+                      operator:
+                        'EQ',
+
+                      value:
+                        ticketOwnerEmail,
+                    },
+                  ],
+                },
+              ],
+
+              properties: [
+                'email',
+                'firstname',
+                'lastname',
+                'app_support_team_member',
+                'dealer_fcm_token',
+              ],
+
+              limit: 1,
+            }),
+          }
+        );
+
+      const ownerContactSearchData =
+        await ownerContactSearchResponse.json();
+
+      if (
+        !ownerContactSearchResponse.ok
+      ) {
+
+        console.error(
+          'Ticket owner contact search failed:',
+          ownerContactSearchData
+        );
+
+        return;
+      }
+
+      const ownerContact =
+        ownerContactSearchData
+          .results?.[0];
+
+      if (!ownerContact) {
+
+        console.log(
+          `Push skipped: Contact not found for owner ${ticketOwnerEmail}`
+        );
+
+        return;
+      }
+
+      const supportValue =
+        String(
+          ownerContact.properties
+            ?.app_support_team_member ||
+            ''
+        )
+          .trim()
+          .toLowerCase();
+
+      const token =
+        ownerContact.properties
+          ?.dealer_fcm_token;
+
+      if (
+        supportValue !== 'yes'
+      ) {
+
+        console.log(
+          `Push skipped: Ticket owner ${ticketOwnerEmail} is not support team member`
+        );
+
+        return;
+      }
+
+      if (!token) {
+
+        console.log(
+          `Push skipped: Ticket owner ${ticketOwnerEmail} has no FCM token`
+        );
+
+        return;
+      }
+
+      dealerRecipients = [
+        {
+          contactId:
+            String(
+              ownerContact.id
+            ),
+
+          email:
+            String(
+              ownerContact.properties
+                ?.email || ''
+            )
+              .trim()
+              .toLowerCase(),
+
+          token,
+
+          recipientType:
+            'support',
+
+          ownerId:
+            String(
+              ticketOwnerId
+            ),
+        },
+      ];
+    }
+
+
+    // --------------------------------------------------------
+    // CASE 2
+    // SUPPORT -> ASSOCIATED DEALER
+    // --------------------------------------------------------
+
+    else if (
+      latestMessage.direction ===
+      'OUTGOING'
+    ) {
+
+      console.log(
+        'Outgoing support message: finding associated customer contacts'
+      );
+
+      const ticketContactsResponse =
+        await fetch(
+          `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}/associations/contacts`,
+          {
+            method: 'GET',
+
+            headers: {
+              Authorization:
+                `Bearer ${HUBSPOT_API_KEY}`,
+              'Content-Type':
+                'application/json',
+            },
+          }
+        );
+
+      const ticketContactsData =
+        await ticketContactsResponse.json();
+
+      if (
+        !ticketContactsResponse.ok
+      ) {
+
+        console.error(
+          'Ticket contact association fetch failed:',
+          ticketContactsData
+        );
+
+        return;
+      }
+
+      const associatedContactIds =
+        (
+          ticketContactsData.results ||
+          []
+        )
+          .map(item =>
+            String(item.id)
+          )
+          .filter(Boolean);
+
+      if (
+        !associatedContactIds.length
+      ) {
+
+        console.log(
+          'Push skipped: No customer associated with ticket'
+        );
+
+        return;
+      }
+
+      const contactRequests =
+        associatedContactIds.map(
+          async contactId => {
+
+            const response =
+              await fetch(
+                `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=email,firstname,lastname,app_support_team_member,dealer_fcm_token`,
+                {
+                  method: 'GET',
+
+                  headers: {
+                    Authorization:
+                      `Bearer ${HUBSPOT_API_KEY}`,
+                    'Content-Type':
+                      'application/json',
+                  },
+                }
+              );
+
+            const data =
+              await response.json();
+
+            if (!response.ok) {
+              return null;
+            }
+
+            return data;
+          }
+        );
+
+      const contacts =
+        (
+          await Promise.all(
+            contactRequests
+          )
+        )
+          .filter(Boolean);
+
+      dealerRecipients =
+        contacts
+          .filter(contact => {
+
+            const supportValue =
+              String(
+                contact.properties
+                  ?.app_support_team_member ||
+                  ''
+              )
+                .trim()
+                .toLowerCase();
+
+            const isSupport =
+              supportValue === 'yes';
+
+            const hasToken =
+              Boolean(
+                contact.properties
+                  ?.dealer_fcm_token
+              );
+
+            return (
+              !isSupport &&
+              hasToken
+            );
+          })
+          .map(contact => ({
+            contactId:
+              String(
+                contact.id
+              ),
+
+            email:
+              String(
+                contact.properties
+                  ?.email || ''
+              )
+                .trim()
+                .toLowerCase(),
+
+            token:
+              contact.properties
+                ?.dealer_fcm_token,
+
+            recipientType:
+              'customer',
+          }));
+    }
+
+
+    console.log(
+      'Dealer notification recipients:',
+      dealerRecipients.map(
+        recipient => ({
+          contactId:
+            recipient.contactId,
+
+          email:
+            recipient.email,
+
+          recipientType:
+            recipient.recipientType,
+        })
+      )
+    );
+
+
+    if (
+      !dealerRecipients.length
+    ) {
+
+      console.log(
+        'Push skipped: No eligible recipient'
+      );
+
+      return;
+    }
+
+
+    // ========================================================
+    // STEP 9
+    // SEND FCM PUSH
+    // ========================================================
+
+    const pushResults =
+      await Promise.allSettled(
+
+        dealerRecipients.map(
+          async recipient => {
+
+            let totalUnreadCount =
+              0;
+
+            /*
+             * Support owner:
+             * owner ke tickets ka total.
+             */
+            if (
+              recipient.recipientType ===
+              'support'
+            ) {
+
+              totalUnreadCount =
+                await getSupportOwnerTotalUnreadCount(
+                  recipient.ownerId,
+                  fetch
+                );
+
+            }
+
+            /*
+             * Dealer:
+             * associated tickets ka total.
+             */
+            else {
+
+              totalUnreadCount =
+                await getDealerTotalUnreadCount(
+                  recipient.contactId,
+                  fetch
+                );
+            }
+
+            console.log(
+              `Push badge for ${recipient.email}:`,
+              totalUnreadCount
+            );
+
+
+            return getMessaging().send({
+
+              token:
+                recipient.token,
+
+
+              notification: {
+
+                title:
+                  notificationTitle,
+
+                body:
+                  notificationBody.slice(
+                    0,
+                    200
+                  ),
+              },
+
+
+              data: {
+
+                ticketId:
+                  String(ticketId),
+
+                threadId:
+                  String(threadId),
+
+                messageId:
+                  String(
+                    latestMessage.id
+                  ),
+
+                ticketSubject:
+                  String(
+                    ticketSubject
+                  ),
+
+                senderEmail:
+                  String(
+                    senderEmail
+                  ),
+
+                senderRole:
+                  String(
+                    senderRole
+                  ),
+
+                appSupportTeamMember:
+                  senderIsSupport
+                    ? 'Yes'
+                    : 'No',
+
+                direction:
+                  String(
+                    latestMessage.direction
+                  ),
+
+                targetScreen:
+                  'ViewTicketDetail',
+
+                type:
+                  senderIsSupport
+                    ? 'support_message'
+                    : 'customer_message',
+
+                /*
+                 * Specific ticket unread.
+                 */
+                ticketUnreadCount:
+                  String(
+                    newTicketUnreadCount
+                  ),
+
+                /*
+                 * Total unread.
+                 */
+                totalUnreadCount:
+                  String(
+                    totalUnreadCount
+                  ),
+              },
+
+
+              /*
+               * iOS APNs support.
+               * Android is automatically handled
+               * by FCM notification above.
+               */
+              apns: {
+
+                headers: {
+                  'apns-priority':
+                    '10',
+                },
+
+                payload: {
+
+                  aps: {
+
+                    alert: {
+
+                      title:
+                        notificationTitle,
+
+                      body:
+                        notificationBody.slice(
+                          0,
+                          200
+                        ),
+                    },
+
+                    sound:
+                      'default',
+
+                    badge:
+                      totalUnreadCount,
+                  },
+                },
+              },
+            });
+          }
+        )
+      );
+
+
+    // ========================================================
+    // STEP 10
+    // PUSH SUMMARY
+    // ========================================================
+
+    pushResults.forEach(
+      (result, index) => {
+
+        if (
+          result.status ===
+          'fulfilled'
+        ) {
+
+          console.log(
+            `Push ${index + 1} success:`,
+            result.value
+          );
+
+        } else {
+
+          console.error(
+            `Push ${index + 1} failed:`,
+            {
+              code:
+                result.reason?.code,
+
+              message:
+                result.reason?.message,
+            }
+          );
+        }
+      }
+    );
+
+
+    const successCount =
+      pushResults.filter(
+        result =>
+          result.status ===
+          'fulfilled'
+      ).length;
+
+    const failureCount =
+      pushResults.length -
+      successCount;
+
+
+    console.log(
+      '========== PUSH SUMMARY =========='
+    );
+
+    console.log(
+      'Successful:',
+      successCount
+    );
+
+    console.log(
+      'Failed:',
+      failureCount
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      'HubSpot webhook processing error:',
+      {
+        code:
+          error?.code,
+
+        message:
+          error?.message,
+
+        stack:
+          error?.stack,
+      }
+    );
+  }
+});
+
+
+
+
+
+
+
+// ============================================================
+// MARK TICKET AS READ
+// ============================================================
+
+app.post(
+  '/mark-ticket-read',
+  async (req, res) => {
+
+    const {
+      ticketId,
+      contactId,
+    } = req.body;
+
+
+    console.log(
+      '=== mark-ticket-read hit ==='
+    );
+
+    console.log(
+      'ticketId:',
+      ticketId
+    );
+
+    console.log(
+      'contactId:',
+      contactId
+    );
+
+
+    if (
+      !ticketId ||
+      !contactId
+    ) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          'ticketId and contactId are required',
+      });
+    }
+
+
+    try {
+
+      const fetch = (...args) =>
+        import('node-fetch').then(
+          ({ default: fetch }) =>
+            fetch(...args)
+        );
+
+
+      // ======================================================
+      // STEP 1
+      // VERIFY TICKET BELONGS TO CONTACT
+      // ======================================================
+
+      const associationResponse =
+        await fetch(
+          `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}/associations/ticket`,
+          {
+            method: 'GET',
+
+            headers: {
+              Authorization:
+                `Bearer ${HUBSPOT_API_KEY}`,
+
+              'Content-Type':
+                'application/json',
+            },
+          }
+        );
+
+
+      const associationData =
+        await associationResponse.json();
+
+
+      if (
+        !associationResponse.ok
+      ) {
+
+        console.error(
+          'Unable to verify ticket association:',
+          associationData
+        );
+
+        return res.status(
+          associationResponse.status
+        ).json({
+          success: false,
+          message:
+            'Unable to verify ticket association',
+        });
+      }
+
+
+      const associatedTicketIds =
+        (
+          associationData.results ||
+          []
+        )
+          .map(item =>
+            String(item.id)
+          );
+
+
+      if (
+        !associatedTicketIds.includes(
+          String(ticketId)
+        )
+      ) {
+
+        return res.status(403).json({
+          success: false,
+          message:
+            'Ticket is not associated with this contact',
+        });
+      }
+
+
+      // ======================================================
+      // STEP 2
+      // SET CURRENT TICKET UNREAD = 0
+      // ======================================================
+
+      const updateResponse =
+        await fetch(
+          `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}`,
+          {
+            method: 'PATCH',
+
+            headers: {
+              Authorization:
+                `Bearer ${HUBSPOT_API_KEY}`,
+
+              'Content-Type':
+                'application/json',
+            },
+
+            body: JSON.stringify({
+              properties: {
+                dealer_unread_count:
+                  '0',
+              },
+            }),
+          }
+        );
+
+
+      const updateText =
+        await updateResponse.text();
+
+
+      if (
+        !updateResponse.ok
+      ) {
+
+        console.error(
+          'Mark ticket read error:',
+          updateText
+        );
+
+        return res.status(
+          updateResponse.status
+        ).json({
+          success: false,
+          message:
+            'Unable to mark ticket read',
+        });
+      }
+
+
+      // ======================================================
+      // STEP 3
+      // CALCULATE REMAINING TOTAL
+      // ======================================================
+
+      const totalUnreadCount =
+        await getDealerTotalUnreadCount(
+          String(contactId),
+          fetch
+        );
+
+
+      console.log(
+        `Ticket ${ticketId} marked read. Remaining unread:`,
+        totalUnreadCount
+      );
+
+
+      // ======================================================
+      // STEP 4
+      // RESPONSE
+      // ======================================================
+
+      return res.json({
+
+        success: true,
+
+        ticketUnreadCount:
+          0,
+
+        totalUnreadCount:
+          totalUnreadCount,
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        'mark-ticket-read error:',
+        error
+      );
+
+
+      return res.status(500).json({
+        success: false,
+        message:
+          'Internal server error',
+      });
+    }
+  }
+);
+
+
+
+
+
+
+
 app.post('/get_tickets', async (req, res) => {
   const { contactId, type } = req.body;
 
@@ -1421,7 +3163,9 @@ app.post('/get_tickets', async (req, res) => {
 
   try {
     const fetch = (...args) =>
-      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+      import('node-fetch').then(
+        ({ default: fetch }) => fetch(...args)
+      );
 
     let ticketIds = [];
 
@@ -1441,10 +3185,14 @@ app.post('/get_tickets', async (req, res) => {
         }
       );
 
-      const associationData = await associationResponse.json();
+      const associationData =
+        await associationResponse.json();
 
       if (associationData.results) {
-        ticketIds = associationData.results.map(item => item.id);
+        ticketIds =
+          associationData.results.map(
+            item => item.id
+          );
       }
     }
 
@@ -1453,48 +3201,59 @@ app.post('/get_tickets', async (req, res) => {
     // ============================
     if (type === 'org') {
 
-      // 1️⃣ GET COMPANY ID
       const contactRes = await fetch(
         `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?associations=companies`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            'Authorization':
+              `Bearer ${HUBSPOT_API_KEY}`,
             'Content-Type': 'application/json',
           },
         }
       );
 
-      const contactData = await contactRes.json();
+      const contactData =
+        await contactRes.json();
 
-      const companies = contactData?.associations?.companies?.results || [];
+      const companies =
+        contactData?.associations?.companies?.results || [];
 
-      const company = companies.find(c => c.type === 'contact_to_company');
+      const company =
+        companies.find(
+          c => c.type === 'contact_to_company'
+        );
 
       if (!company) {
-        return res.status(200).json({ tickets: [] });
+        return res.status(200).json({
+          tickets: [],
+        });
       }
 
       const companyId = company.id;
 
-      // 2️⃣ GET COMPANY TICKETS
       const companyRes = await fetch(
         `https://api.hubapi.com/crm/v3/objects/companies/${companyId}?associations=tickets`,
         {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
+            'Authorization':
+              `Bearer ${HUBSPOT_API_KEY}`,
             'Content-Type': 'application/json',
           },
         }
       );
 
-      const companyData = await companyRes.json();
+      const companyData =
+        await companyRes.json();
 
-      const tickets = companyData?.associations?.tickets?.results || [];
+      const tickets =
+        companyData?.associations?.tickets?.results || [];
 
       ticketIds = tickets
-        .filter(t => t.type === 'company_to_ticket')
+        .filter(
+          t => t.type === 'company_to_ticket'
+        )
         .map(t => t.id);
     }
 
@@ -1511,36 +3270,64 @@ app.post('/get_tickets', async (req, res) => {
     // ============================
     // 🎯 FETCH TICKET DETAILS
     // ============================
-    const ticketPromises = ticketIds.map(ticketId =>
-      fetch(
-        `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage,customer_portal`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      ).then(res => res.json())
-    );
+    const ticketPromises =
+      ticketIds.map(ticketId =>
+        fetch(
+          `https://api.hubapi.com/crm/v3/objects/tickets/${ticketId}?properties=subject,createdate,hubspot_owner_id,hs_pipeline_stage,customer_portal,dealer_unread_count`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization':
+                `Bearer ${HUBSPOT_API_KEY}`,
+              'Content-Type':
+                'application/json',
+            },
+          }
+        ).then(res => res.json())
+      );
 
-    const ticketResponses = await Promise.all(ticketPromises);
+    const ticketResponses =
+      await Promise.all(ticketPromises);
 
-    const formattedTickets = ticketResponses.map(ticket => ({
-      ticketId: ticket.id,
-      subject: ticket.properties.subject || '',
-      createdDate: ticket.properties.createdate || '',
-      ownerId: ticket.properties.hubspot_owner_id || '',
-      status: ticket.properties.hs_pipeline_stage || '',
-      customer_portal: ticket.properties.customer_portal || '',
-    }));
+    const formattedTickets =
+      ticketResponses.map(ticket => ({
+
+        ticketId: ticket.id,
+
+        subject:
+          ticket.properties?.subject || '',
+
+        createdDate:
+          ticket.properties?.createdate || '',
+
+        ownerId:
+          ticket.properties?.hubspot_owner_id || '',
+
+        status:
+          ticket.properties?.hs_pipeline_stage || '',
+
+        customer_portal:
+          ticket.properties?.customer_portal || '',
+
+        // 🔴 UNREAD COUNT
+        dealer_unread_count:
+          Number(
+            ticket.properties
+              ?.dealer_unread_count || 0
+          ),
+      }));
 
     return res.status(200).json({
       tickets: formattedTickets,
     });
 
   } catch (error) {
-    console.error('Error:', error);
+
+    console.error(
+      'Error:',
+      error
+    );
+
     return res.status(500).json({
       message: 'Internal server error',
     });
@@ -1559,35 +3346,50 @@ app.post('/get_owner_ticket', async (req, res) => {
   }
 
   try {
+
     const fetch = (...args) =>
-      import('node-fetch').then(({ default: fetch }) => fetch(...args));
+      import('node-fetch').then(
+        ({ default: fetch }) => fetch(...args)
+      );
 
     let allTickets = [];
     let after = null;
 
     do {
+
       const response = await fetch(
         'https://api.hubapi.com/crm/v3/objects/tickets/search',
         {
           method: 'POST',
+
           headers: {
-            'Authorization': `Bearer ${HUBSPOT_API_KEY}`,
-            'Content-Type': 'application/json',
+            'Authorization':
+              `Bearer ${HUBSPOT_API_KEY}`,
+            'Content-Type':
+              'application/json',
           },
+
           body: JSON.stringify({
+
             filterGroups: [
               {
                 filters: [
                   {
-                    propertyName: 'hubspot_owner_id',
+                    propertyName:
+                      'hubspot_owner_id',
+
                     operator: 'EQ',
+
                     value: ownerId,
                   },
                 ],
               },
             ],
+
             limit: 100,
-            after: after, // 👈 pagination cursor
+
+            after: after,
+
             properties: [
               'subject',
               'content',
@@ -1596,41 +3398,84 @@ app.post('/get_owner_ticket', async (req, res) => {
               'hubspot_owner_id',
               'createdate',
               'customer_portal',
+              'dealer_unread_count',
             ],
-            sorts: ['createdate'],
+
+            sorts: [
+              'createdate',
+            ],
           }),
         }
       );
 
-      const data = await response.json();
-      console.log('data---ticketowner ', data);
+      const data =
+        await response.json();
 
-      allTickets = [...allTickets, ...(data.results || [])];
+      console.log(
+        'data---ticketowner ',
+        data
+      );
 
-      after = data?.paging?.next?.after || null;
+      allTickets = [
+        ...allTickets,
+        ...(data.results || []),
+      ];
+
+      after =
+        data?.paging?.next?.after || null;
 
     } while (after);
 
-    const tickets = allTickets.map(item => ({
-      ticketId: item.id,
-      subject: item.properties.subject || '',
-      createdDate: item.properties.createdate || '',
-      ownerId: item.properties.hubspot_owner_id || '',
-      status: item.properties.hs_pipeline_stage || '',
-      content: item.properties.content || '',
-      customer_portal: item.properties.customer_portal || '',
-    }));
+    const tickets =
+      allTickets.map(item => ({
+
+        ticketId:
+          item.id,
+
+        subject:
+          item.properties?.subject || '',
+
+        createdDate:
+          item.properties?.createdate || '',
+
+        ownerId:
+          item.properties?.hubspot_owner_id || '',
+
+        status:
+          item.properties?.hs_pipeline_stage || '',
+
+        content:
+          item.properties?.content || '',
+
+        customer_portal:
+          item.properties?.customer_portal || '',
+        dealer_unread_count:
+          Number(
+            item.properties
+              ?.dealer_unread_count || 0
+          ),
+      }));
 
     return res.status(200).json({
-      message: 'All owner tickets fetched',
-      total: tickets.length,
+      message:
+        'All owner tickets fetched',
+
+      total:
+        tickets.length,
+
       tickets,
     });
 
   } catch (error) {
-    console.error('Owner Ticket Fetch Error:', error);
+
+    console.error(
+      'Owner Ticket Fetch Error:',
+      error
+    );
+
     return res.status(500).json({
-      message: 'Internal server error',
+      message:
+        'Internal server error',
     });
   }
 });
@@ -1677,6 +3522,16 @@ app.post('/get-owner-id', async (req, res) => {
     return res.status(500).json({ error: 'Failed to get owner' });
   }
 });
+
+
+
+
+
+
+
+
+
+
 
 
 //Get Conversation Details
