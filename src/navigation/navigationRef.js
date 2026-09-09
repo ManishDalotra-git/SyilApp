@@ -2,78 +2,291 @@ import {
   createNavigationContainerRef,
 } from '@react-navigation/native';
 
+
+// =====================================================
+// NAVIGATION REF
+// =====================================================
+//
+// IMPORTANT:
+// Yehi navigationRef App.jsx ke NavigationContainer
+// mein bhi use hoga.
+//
+// Isse FCM notification se actual navigation container
+// control hoga.
+//
+// =====================================================
+
 export const navigationRef =
   createNavigationContainerRef();
 
-let pendingTicketData = null;
 
-export const openTicketFromNotification = data => {
-  console.log(
-    'Notification navigation data:',
-    data,
-  );
+// =====================================================
+// PENDING NOTIFICATION
+// =====================================================
+//
+// Agar notification click ke time NavigationContainer
+// ready nahi hai, ticket yahan temporarily store hoga.
+//
+// Navigation ready hone ke baad openPendingTicket()
+// isko ViewTicketDetail par open karega.
+//
+// =====================================================
 
-  if (!data?.ticketId) {
-    console.log(
-      'Notification ticketId missing',
-    );
-    return;
-  }
+let pendingTicketData =
+  null;
 
-  const routeParams = {
-    ticketId: String(data.ticketId),
 
-    subject: String(
-      data.ticketSubject ||
-      'Ticket Details',
-    ),
+// =====================================================
+// OPEN TICKET FROM NOTIFICATION
+// =====================================================
 
-    threadId: String(
-      data.threadId || '',
-    ),
+export const openTicketFromNotification =
+  data => {
 
-    fromNotification: true,
+    try {
+
+      console.log(
+        '=========================================='
+      );
+
+      console.log(
+        'OPEN TICKET FROM NOTIFICATION'
+      );
+
+      console.log(
+        'Notification data:',
+        data
+      );
+
+      console.log(
+        'Navigation ready:',
+        navigationRef.isReady()
+      );
+
+      console.log(
+        '=========================================='
+      );
+
+
+      // -------------------------------------------------
+      // CHECK TICKET ID
+      // -------------------------------------------------
+
+      if (!data?.ticketId) {
+
+        console.log(
+          '❌ Notification ticketId missing'
+        );
+
+        return;
+
+      }
+
+
+      // -------------------------------------------------
+      // PREPARE ROUTE PARAMS
+      // -------------------------------------------------
+
+      const routeParams = {
+
+        ticketId:
+          String(data.ticketId),
+
+        subject:
+          String(
+            data.ticketSubject ||
+            data.subject ||
+            'Ticket Details'
+          ),
+
+        threadId:
+          String(
+            data.threadId || ''
+          ),
+
+        fromNotification:
+          true,
+
+      };
+
+
+      console.log(
+        'Prepared route params:',
+        routeParams
+      );
+
+
+      // -------------------------------------------------
+      // NAVIGATION NOT READY
+      // -------------------------------------------------
+
+      if (
+        !navigationRef.isReady()
+      ) {
+
+        console.log(
+          '⏳ Navigation not ready.'
+        );
+
+        console.log(
+          'Saving pending ticket:',
+          routeParams
+        );
+
+
+        pendingTicketData =
+          routeParams;
+
+
+        return;
+
+      }
+
+
+      // -------------------------------------------------
+      // NAVIGATION READY
+      // -------------------------------------------------
+
+      console.log(
+        '✅ Navigation is ready'
+      );
+
+      console.log(
+        '➡️ Opening ViewTicketDetail'
+      );
+
+
+      navigationRef.navigate(
+        'ViewTicketDetail',
+        routeParams
+      );
+
+
+    } catch (error) {
+
+      console.log(
+        '❌ openTicketFromNotification error:',
+        error
+      );
+
+    }
+
   };
 
-  if (!navigationRef.isReady()) {
-    console.log(
-      'Navigation not ready, saving ticket temporarily',
-    );
 
-    pendingTicketData =
-      routeParams;
+// =====================================================
+// OPEN PENDING TICKET
+// =====================================================
+//
+// App start hone ke time NavigationContainer ready
+// nahi tha to ticket pendingTicketData mein save hua tha.
+//
+// Ab NavigationContainer ready hone par yahan se
+// ViewTicketDetail open hoga.
+//
+// =====================================================
 
-    return;
-  }
+export const openPendingTicket =
+  () => {
 
-  console.log(
-    'Opening ViewTicketDetail:',
-    routeParams,
-  );
+    try {
 
-  navigationRef.navigate(
-    'ViewTicketDetail',
-    routeParams,
-  );
-};
+      console.log(
+        '=========================================='
+      );
 
-export const openPendingTicket = () => {
-  if (
-    !navigationRef.isReady() ||
-    !pendingTicketData
-  ) {
-    return;
-  }
+      console.log(
+        'CHECKING PENDING NOTIFICATION TICKET'
+      );
 
-  console.log(
-    'Opening pending notification ticket:',
-    pendingTicketData,
-  );
+      console.log(
+        'Navigation ready:',
+        navigationRef.isReady()
+      );
 
-  navigationRef.navigate(
-    'ViewTicketDetail',
-    pendingTicketData,
-  );
+      console.log(
+        'Pending ticket:',
+        pendingTicketData
+      );
 
-  pendingTicketData = null;
-};
+      console.log(
+        '=========================================='
+      );
+
+
+      // -------------------------------------------------
+      // NOTHING PENDING
+      // -------------------------------------------------
+
+      if (
+        !pendingTicketData
+      ) {
+
+        console.log(
+          'ℹ️ No pending notification ticket'
+        );
+
+        return;
+
+      }
+
+
+      // -------------------------------------------------
+      // NAVIGATION NOT READY
+      // -------------------------------------------------
+
+      if (
+        !navigationRef.isReady()
+      ) {
+
+        console.log(
+          '⏳ Navigation still not ready'
+        );
+
+        return;
+
+      }
+
+
+      // -------------------------------------------------
+      // COPY TICKET
+      // -------------------------------------------------
+
+      const ticket =
+        pendingTicketData;
+
+
+      // -------------------------------------------------
+      // CLEAR PENDING FIRST
+      // -------------------------------------------------
+
+      pendingTicketData =
+        null;
+
+
+      // -------------------------------------------------
+      // OPEN TICKET
+      // -------------------------------------------------
+
+      console.log(
+        '➡️ Opening pending notification ticket:',
+        ticket
+      );
+
+
+      navigationRef.navigate(
+        'ViewTicketDetail',
+        ticket
+      );
+
+
+    } catch (error) {
+
+      console.log(
+        '❌ openPendingTicket error:',
+        error
+      );
+
+    }
+
+  };

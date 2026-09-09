@@ -1,6 +1,7 @@
-import { StyleSheet, Text, View, ImageBackground , TouchableOpacity, Image  } from 'react-native'
-import React from 'react'
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React, { useEffect, } from 'react';
+import { createNativeStackNavigator, } from '@react-navigation/native-stack';
+import { NavigationContainer, } from '@react-navigation/native';
+
 import Home from './src/screens/Home';
 import Profile from './src/screens/Profile';
 import Ticket from './src/screens/Ticket';
@@ -19,38 +20,63 @@ import UploadArticles from './src/screens/UploadArticles';
 import OwnerTickets from './src/screens/OwnerTickets';
 import Chatscreen from './src/screens/Chatscreen';
 
-import {
-  NavigationContainer,
-  createNavigationContainerRef,
-} from '@react-navigation/native';
+import { navigationRef, openPendingTicket, } from './src/navigation/navigationRef';
+import { setupNotificationOpenHandlers, } from './src/utils/fcm';
 
 const Stack = createNativeStackNavigator();
-export const navigationRef = createNavigationContainerRef();
-  
 const App = () => {
+
+  useEffect(() => {
+    console.log( '==========================================' );
+    console.log( 'APP: Setting notification handlers' );
+    console.log( '==========================================' );
+
+    const unsubscribe = setupNotificationOpenHandlers();
+
+    return () => {
+      if (
+        unsubscribe
+      ) {
+        unsubscribe();
+      }
+    };
+  }, []);
+
   return (
-     <NavigationContainer ref={navigationRef}>
+
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => {
+        console.log( '==========================================' );
+        console.log( 'NAVIGATION CONTAINER READY' );
+        console.log( '==========================================' );
+        openPendingTicket();
+      }}
+
+    >
       <Stack.Navigator>
-        <Stack.Screen name="Loading" component={Loading} options={{ headerShown: false }} />
-        <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
-        <Stack.Screen name="Profile" component={Profile} options={{ headerShown: false }}  />
-        <Stack.Screen name="Ticket" component={Ticket} options={{ headerShown: false }}  />
-        <Stack.Screen name="ThankYou" component={ThankYou} options={{ headerShown: false }}  />
-        <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPassword} options={{ headerShown: false }} />
-        <Stack.Screen name="KnowledgeBase" component={KnowledgeBase} options={{ headerShown: false }} />
-        <Stack.Screen name="KnowledgeDetail" component={KnowledgeDetail} options={{ title: 'Article', headerShown: false }} />
-        <Stack.Screen name="More" component={More} options={{ headerShown: false }} />
-        <Stack.Screen name="Feedback" component={Feedback} options={{ headerShown: false }} />
-        <Stack.Screen name="AskAlex" component={AskAlex} options={{ headerShown: false }} />
-        <Stack.Screen name="ViewTicket" component={ViewTicket} options={{ headerShown: false }} />
-        <Stack.Screen name="ViewTicketDetail" component={ViewTicketDetail} options={{ headerShown: false }} />
-        <Stack.Screen name="UploadArticles" component={UploadArticles} options={{ headerShown: false }} />
-        <Stack.Screen name="OwnerTickets" component={OwnerTickets} options={{ headerShown: false }} />
-        <Stack.Screen name="Chatscreen" component={Chatscreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Loading" component={Loading} options={{ headerShown: false, }} />
+        <Stack.Screen name="Home" component={Home} options={{ headerShown: false, }} />
+        <Stack.Screen name="Profile" component={Profile} options={{ headerShown: false, }} />
+        <Stack.Screen name="Ticket" omponent={Ticket} options={{ headerShown: false, }} />
+        <Stack.Screen name="ThankYou" component={ThankYou} options={{ headerShown: false, }} />
+        <Stack.Screen name="Login" omponent={Login} options={{ headerShown: false, }} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPassword} options={{ headerShown: false, }} />
+        <Stack.Screen name="KnowledgeBase" component={KnowledgeBase} options={{ headerShown: false, }} />
+        <Stack.Screen name="KnowledgeDetail" component={KnowledgeDetail} options={{ title: 'Article', headerShown: false, }} />
+        <Stack.Screen name="More" component={More} options={{ headerShown: false, }} />
+        <Stack.Screen name="Feedback" component={Feedback} options={{ headerShown: false, }} />
+        <Stack.Screen name="AskAlex" component={AskAlex} options={{headerShown: false, }} />
+        <Stack.Screen name="ViewTicket" component={ViewTicket} options={{ headerShown: false, }} />
+        <Stack.Screen name="ViewTicketDetail" component={ViewTicketDetail} options={{ headerShown: false, }} />
+        <Stack.Screen name="UploadArticles" component={UploadArticles} options={{ headerShown: false, }} />
+        <Stack.Screen name="OwnerTickets" component={OwnerTickets} options={{ headerShown: false, }} />
+        <Stack.Screen name="Chatscreen" component={Chatscreen} options={{ headerShown: false, }}/>
       </Stack.Navigator>
     </NavigationContainer>
-  )
-}
- 
-export default App
+
+  );
+
+};
+
+export default App;
