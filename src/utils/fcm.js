@@ -310,8 +310,12 @@ export const saveFCMToken =
       // REQUEST NOTIFICATION PERMISSION FIRST
       // -----------------------------------------------
 
+      console.log('🔔 Starting FCM permission request...');
+
       const permissionGranted =
         await requestNotificationPermission();
+
+      console.log('🔔 Registering device for FCM...');
 
 
       if (!permissionGranted) {
@@ -334,6 +338,9 @@ export const saveFCMToken =
       // -----------------------------------------------
       // GET CURRENT FCM TOKEN
       // -----------------------------------------------
+
+
+      console.log('🔔 Requesting FCM token...');
 
       const token =
         await getToken(
