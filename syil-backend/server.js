@@ -431,6 +431,231 @@ app.post(
 );
 
 
+// ============================================================
+// REMOVE DEALER FCM TOKEN
+// ============================================================
+
+app.post(
+  '/remove-dealer-fcm-token',
+  async (req, res) => {
+
+    const {email} = req.body;
+
+    if (!email) {
+
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+
+    }
+
+    try {
+
+      const fetch = (...args) =>
+        import('node-fetch').then(
+          ({default: fetch}) =>
+            fetch(...args),
+        );
+
+
+      const normalizedEmail =
+        String(email)
+          .trim()
+          .toLowerCase();
+
+
+      // -----------------------------------------------
+      // FIND CONTACT
+      // -----------------------------------------------
+
+      const searchResponse =
+        await fetch(
+          'https://api.hubapi.com/crm/v3/objects/contacts/search',
+          {
+            method: 'POST',
+
+            headers: {
+              Authorization:
+                `Bearer ${HUBSPOT_API_KEY}`,
+
+              'Content-Type':
+                'application/json',
+            },
+
+            body:
+              JSON.stringify({
+
+                filterGroups: [
+                  {
+                    filters: [
+                      {
+                        propertyName:
+                          'email',
+
+                        operator:
+                          'EQ',
+
+                        value:
+                          normalizedEmail,
+                      },
+                    ],
+                  },
+                ],
+
+                properties: [
+                  'email',
+                  'dealer_fcm_token',
+                ],
+
+                limit: 1,
+
+              }),
+          },
+        );
+
+
+      const searchData =
+        await searchResponse.json();
+
+
+      if (!searchResponse.ok) {
+
+        console.error(
+          'Remove FCM contact search failed:',
+          searchData,
+        );
+
+        return res.status(
+          searchResponse.status,
+        ).json({
+
+          success: false,
+
+          message:
+            'Unable to find dealer contact',
+
+        });
+      }
+
+
+      if (
+        !searchData.results?.length
+      ) {
+
+        return res.status(404).json({
+
+          success: false,
+
+          message:
+            'Dealer contact not found',
+
+        });
+      }
+
+
+      const contactId =
+        String(
+          searchData.results[0].id,
+        );
+
+
+      // -----------------------------------------------
+      // CLEAR FCM TOKEN
+      // -----------------------------------------------
+
+      const updateResponse =
+        await fetch(
+          `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}`,
+          {
+            method: 'PATCH',
+
+            headers: {
+              Authorization:
+                `Bearer ${HUBSPOT_API_KEY}`,
+
+              'Content-Type':
+                'application/json',
+            },
+
+            body:
+              JSON.stringify({
+
+                properties: {
+
+                  dealer_fcm_token:
+                    '',
+
+                },
+
+              }),
+          },
+        );
+
+
+      const updateText =
+        await updateResponse.text();
+
+
+      if (!updateResponse.ok) {
+
+        console.error(
+          'Remove FCM token HubSpot update failed:',
+          updateText,
+        );
+
+        return res.status(
+          updateResponse.status,
+        ).json({
+
+          success: false,
+
+          message:
+            'Unable to remove FCM token',
+
+          detail:
+            updateText,
+
+        });
+      }
+
+
+      console.log(
+        `✅ Dealer FCM token removed for contact ${contactId}`,
+      );
+
+
+      return res.json({
+
+        success: true,
+
+        message:
+          'Dealer FCM token removed successfully',
+
+        contactId,
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        'Remove dealer FCM token error:',
+        error,
+      );
+
+      return res.status(500).json({
+
+        success: false,
+
+        message:
+          'Internal server error',
+
+      });
+    }
+  },
+);
+
+
 
 app.post('/get-contact-id', async (req, res) => {
   const { email } = req.body;
@@ -2975,126 +3200,196 @@ app.post('/hubspot-webhook', async (req, res) => {
             );
 
 
-            return getMessaging().send({
+            try {
 
-              token:
-                recipient.token,
+  const messageId =
+    await getMessaging().send({
+
+      token:
+        recipient.token,
+
+      notification: {
+        title:
+          notificationTitle,
+
+        body:
+          notificationBody.slice(
+            0,
+            200,
+          ),
+      },
+
+      data: {
+
+        ticketId:
+          String(ticketId),
+
+        threadId:
+          String(threadId),
+
+        messageId:
+          String(
+            latestMessage.id,
+          ),
+
+        ticketSubject:
+          String(
+            ticketSubject,
+          ),
+
+        senderEmail:
+          String(
+            senderEmail,
+          ),
+
+        senderRole:
+          String(
+            senderRole,
+          ),
+
+        appSupportTeamMember:
+          senderIsSupport
+            ? 'Yes'
+            : 'No',
+
+        direction:
+          String(
+            latestMessage.direction,
+          ),
+
+        targetScreen:
+          'ViewTicketDetail',
+
+        type:
+          senderIsSupport
+            ? 'support_message'
+            : 'customer_message',
+
+        ticketUnreadCount:
+          String(
+            newTicketUnreadCount,
+          ),
+
+        totalUnreadCount:
+          String(
+            totalUnreadCount,
+          ),
+      },
+
+      apns: {
+        headers: {
+          'apns-priority':
+            '10',
+        },
+
+        payload: {
+          aps: {
+
+            alert: {
+              title:
+                notificationTitle,
+
+              body:
+                notificationBody.slice(
+                  0,
+                  200,
+                ),
+            },
+
+            sound:
+              'default',
+
+            badge:
+              totalUnreadCount,
+
+          },
+        },
+      },
+
+    });
 
 
-              notification: {
+  return messageId;
 
-                title:
-                  notificationTitle,
 
-                body:
-                  notificationBody.slice(
-                    0,
-                    200
-                  ),
+} catch (error) {
+
+  console.error(
+    `❌ Push failed for ${recipient.email}:`,
+    {
+      code:
+        error?.code,
+
+      message:
+        error?.message,
+    },
+  );
+
+
+  // -----------------------------------------------
+  // INVALID / EXPIRED FCM TOKEN
+  // -----------------------------------------------
+
+  if (
+    error?.code ===
+      'messaging/registration-token-not-registered' ||
+
+    error?.code ===
+      'messaging/invalid-registration-token'
+  ) {
+
+    console.log(
+      `🧹 Removing invalid FCM token for ${recipient.email}`,
+    );
+
+
+    try {
+
+      await fetch(
+        `https://api.hubapi.com/crm/v3/objects/contacts/${recipient.contactId}`,
+        {
+          method: 'PATCH',
+
+          headers: {
+            Authorization:
+              `Bearer ${HUBSPOT_API_KEY}`,
+
+            'Content-Type':
+              'application/json',
+          },
+
+          body:
+            JSON.stringify({
+
+              properties: {
+
+                dealer_fcm_token:
+                  '',
+
               },
 
-
-              data: {
-
-                ticketId:
-                  String(ticketId),
-
-                threadId:
-                  String(threadId),
-
-                messageId:
-                  String(
-                    latestMessage.id
-                  ),
-
-                ticketSubject:
-                  String(
-                    ticketSubject
-                  ),
-
-                senderEmail:
-                  String(
-                    senderEmail
-                  ),
-
-                senderRole:
-                  String(
-                    senderRole
-                  ),
-
-                appSupportTeamMember:
-                  senderIsSupport
-                    ? 'Yes'
-                    : 'No',
-
-                direction:
-                  String(
-                    latestMessage.direction
-                  ),
-
-                targetScreen:
-                  'ViewTicketDetail',
-
-                type:
-                  senderIsSupport
-                    ? 'support_message'
-                    : 'customer_message',
-
-                /*
-                 * Specific ticket unread.
-                 */
-                ticketUnreadCount:
-                  String(
-                    newTicketUnreadCount
-                  ),
-
-                /*
-                 * Total unread.
-                 */
-                totalUnreadCount:
-                  String(
-                    totalUnreadCount
-                  ),
-              },
+            }),
+        },
+      );
 
 
-              /*
-               * iOS APNs support.
-               * Android is automatically handled
-               * by FCM notification above.
-               */
-              apns: {
+      console.log(
+        `✅ Invalid FCM token removed for ${recipient.email}`,
+      );
 
-                headers: {
-                  'apns-priority':
-                    '10',
-                },
+    } catch (removeError) {
 
-                payload: {
+      console.error(
+        '❌ Failed to remove invalid FCM token:',
+        removeError,
+      );
 
-                  aps: {
+    }
+  }
 
-                    alert: {
 
-                      title:
-                        notificationTitle,
-
-                      body:
-                        notificationBody.slice(
-                          0,
-                          200
-                        ),
-                    },
-
-                    sound:
-                      'default',
-
-                    badge:
-                      totalUnreadCount,
-                  },
-                },
-              },
-            });
+  throw error;
+}
           }
         )
       );

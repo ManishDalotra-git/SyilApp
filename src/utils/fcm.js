@@ -1,4 +1,7 @@
-import {Platform} from 'react-native';
+import {
+  Platform,
+  PermissionsAndroid,
+} from 'react-native';
 
 import {getApp} from '@react-native-firebase/app';
 
@@ -13,27 +16,103 @@ import {
 
 import {openTicketFromNotification} from '../navigation/navigationRef';
 
-
-// =====================================================
-// FIREBASE
-// =====================================================
-
 const firebaseApp = getApp();
-
-const messaging =
-  getMessaging(firebaseApp);
-
-
-// =====================================================
-// BACKEND
-// =====================================================
+const messaging = getMessaging(firebaseApp);
 
 const API_URL =
   'https://syilapp-w8ye.onrender.com';
 
 
 // =====================================================
-// NOTIFICATION DATA HANDLER
+// NOTIFICATION PERMISSION
+// =====================================================
+
+export const requestNotificationPermission =
+  async () => {
+
+    try {
+
+      // -----------------------------------------------
+      // ANDROID 13+
+      // -----------------------------------------------
+
+      if (
+        Platform.OS === 'android' &&
+        Platform.Version >= 33
+      ) {
+
+        const result =
+          await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS
+              .POST_NOTIFICATIONS,
+            {
+              title:
+                'Allow Notifications',
+
+              message:
+                'SYIL Dealer App needs notification permission so you can receive new ticket messages.',
+
+              buttonPositive:
+                'Allow',
+
+              buttonNegative:
+                'Don’t Allow',
+
+              buttonNeutral:
+                'Ask Me Later',
+            },
+          );
+
+        console.log(
+          'Android notification permission:',
+          result,
+        );
+
+        return (
+          result ===
+          PermissionsAndroid.RESULTS.GRANTED
+        );
+      }
+
+      // -----------------------------------------------
+      // ANDROID < 13
+      // -----------------------------------------------
+
+      if (Platform.OS === 'android') {
+        return true;
+      }
+
+      // -----------------------------------------------
+      // iOS
+      // -----------------------------------------------
+
+      const authStatus =
+        await messaging.requestPermission();
+
+      console.log(
+        'iOS notification permission:',
+        authStatus,
+      );
+
+      return (
+        authStatus === 1 ||
+        authStatus === 2
+      );
+
+    } catch (error) {
+
+      console.log(
+        '❌ Notification permission error:',
+        error,
+      );
+
+      return false;
+    }
+  };
+
+
+// =====================================================
+// NOTIFICATION OPEN HANDLER
 // =====================================================
 
 const handleNotificationOpen =
@@ -42,75 +121,46 @@ const handleNotificationOpen =
     try {
 
       console.log(
-        '=========================================='
+        '==========================================',
       );
 
       console.log(
-        'NOTIFICATION OPENED'
+        '🔔 NOTIFICATION OPENED',
       );
 
       console.log(
         'Remote message:',
-        remoteMessage
+        remoteMessage,
       );
 
       console.log(
         'Notification data:',
-        remoteMessage?.data
+        remoteMessage?.data,
       );
 
       console.log(
-        '=========================================='
+        '==========================================',
       );
 
 
-      // -------------------------------------------------
-      // NO MESSAGE
-      // -------------------------------------------------
-
       if (!remoteMessage) {
-
-        console.log(
-          '❌ No remote message'
-        );
-
         return;
-
       }
 
-
-      // -------------------------------------------------
-      // GET DATA
-      // -------------------------------------------------
 
       const data =
         remoteMessage?.data || {};
 
 
-      // -------------------------------------------------
-      // CHECK TICKET ID
-      // -------------------------------------------------
-
       if (!data?.ticketId) {
 
         console.log(
-          '❌ Notification does not contain ticketId'
+          '❌ Notification ticketId missing',
         );
 
         return;
-
       }
 
-
-      console.log(
-        '✅ Notification ticketId:',
-        data.ticketId
-      );
-
-
-      // -------------------------------------------------
-      // OPEN TICKET
-      // -------------------------------------------------
 
       openTicketFromNotification({
 
@@ -121,136 +171,100 @@ const handleNotificationOpen =
           String(
             data.ticketSubject ||
             remoteMessage?.notification?.title ||
-            'Ticket Details'
+            'Ticket Details',
           ),
 
         threadId:
           String(
-            data.threadId || ''
+            data.threadId || '',
           ),
 
         fromNotification:
           true,
-
       });
-
 
     } catch (error) {
 
       console.log(
         '❌ Notification open handler error:',
-        error
+        error,
       );
 
     }
-
   };
 
 
 // =====================================================
 // SETUP NOTIFICATION OPEN HANDLERS
 // =====================================================
-//
-// IMPORTANT:
-// Sirf YAHI function notification click handle karega.
-//
-// Background:
-// onNotificationOpenedApp()
-//
-// Completely closed / killed:
-// getInitialNotification()
-//
-// =====================================================
 
 export const setupNotificationOpenHandlers =
   () => {
 
     console.log(
-      '=========================================='
-    );
-
-    console.log(
-      'SETTING UP NOTIFICATION OPEN HANDLERS'
-    );
-
-    console.log(
-      '=========================================='
+      'SETTING UP NOTIFICATION OPEN HANDLERS',
     );
 
 
-    // =================================================
-    // BACKGROUND STATE
-    // =================================================
+    // -----------------------------------------------
+    // APP IN BACKGROUND
+    // -----------------------------------------------
 
     const unsubscribe =
       onNotificationOpenedApp(
         messaging,
-
         remoteMessage => {
 
           console.log(
-            '📲 Notification opened from BACKGROUND'
+            '📲 Notification opened from BACKGROUND',
           );
 
           handleNotificationOpen(
-            remoteMessage
+            remoteMessage,
           );
 
         },
-
       );
 
 
-    // =================================================
-    // QUIT / KILLED STATE
-    // =================================================
+    // -----------------------------------------------
+    // APP COMPLETELY CLOSED
+    // -----------------------------------------------
 
     getInitialNotification(
-      messaging
+      messaging,
     )
-      .then(
-        remoteMessage => {
+      .then(remoteMessage => {
 
-          if (!remoteMessage) {
-
-            console.log(
-              'ℹ️ No initial notification'
-            );
-
-            return;
-
-          }
-
+        if (!remoteMessage) {
 
           console.log(
-            '📲 Notification opened from QUIT STATE'
+            'ℹ️ No initial notification',
           );
 
-
-          handleNotificationOpen(
-            remoteMessage
-          );
-
+          return;
         }
-      )
-      .catch(
-        error => {
 
-          console.log(
-            '❌ getInitialNotification error:',
-            error
-          );
+        console.log(
+          '📲 Notification opened from QUIT STATE',
+        );
 
-        }
-      );
+        handleNotificationOpen(
+          remoteMessage,
+        );
 
+      })
+      .catch(error => {
 
-    // =================================================
-    // RETURN BACKGROUND LISTENER CLEANUP
-    // =================================================
+        console.log(
+          '❌ getInitialNotification error:',
+          error,
+        );
+
+      });
+
 
     return unsubscribe;
-
   };
 
 
@@ -263,105 +277,122 @@ export const saveFCMToken =
 
     try {
 
+      if (!email) {
+
+        console.log(
+          '❌ saveFCMToken: email missing',
+        );
+
+        return null;
+      }
+
+
       console.log(
-        '=========================================='
+        '==========================================',
       );
 
       console.log(
-        'SAVING FCM TOKEN'
+        'SAVING FCM TOKEN',
       );
 
       console.log(
         'Email:',
-        email
+        email,
       );
 
       console.log(
-        '=========================================='
+        '==========================================',
       );
 
 
-      // -------------------------------------------------
-      // ANDROID DEVICE REGISTRATION
-      // -------------------------------------------------
+      // -----------------------------------------------
+      // REQUEST NOTIFICATION PERMISSION FIRST
+      // -----------------------------------------------
 
-      if (
-        Platform.OS === 'android'
-      ) {
+      const permissionGranted =
+        await requestNotificationPermission();
 
-        await registerDeviceForRemoteMessages();
 
+      if (!permissionGranted) {
+
+        console.log(
+          '❌ Notification permission not granted',
+        );
+
+        return null;
       }
 
 
-      // -------------------------------------------------
-      // GET TOKEN
-      // -------------------------------------------------
+      // -----------------------------------------------
+      // REGISTER DEVICE
+      // -----------------------------------------------
+
+      await registerDeviceForRemoteMessages();
+
+
+      // -----------------------------------------------
+      // GET CURRENT FCM TOKEN
+      // -----------------------------------------------
 
       const token =
         await getToken(
-          messaging
+          messaging,
         );
 
 
       console.log(
         'FCM TOKEN:',
-        token
+        token,
       );
 
-
-      // -------------------------------------------------
-      // TOKEN CHECK
-      // -------------------------------------------------
 
       if (!token) {
 
         console.log(
-          '❌ FCM token not available'
+          '❌ FCM token not available',
         );
 
         return null;
-
       }
 
 
-      // -------------------------------------------------
-      // SAVE TOKEN TO BACKEND
-      // -------------------------------------------------
+      // -----------------------------------------------
+      // SAVE TOKEN
+      //
+      // IMPORTANT:
+      // Correct backend endpoint
+      // -----------------------------------------------
 
       const response =
         await fetch(
-          `${API_URL}/save-fcm-token`,
+          `${API_URL}/save-dealer-fcm-token`,
           {
-
             method:
               'POST',
 
             headers: {
-
               'Content-Type':
                 'application/json',
-
             },
 
             body:
               JSON.stringify({
 
                 email:
-                  email,
+                  String(email)
+                    .trim()
+                    .toLowerCase(),
 
                 fcmToken:
                   token,
 
-              }),
+                platform:
+                  Platform.OS,
 
-          }
+              }),
+          },
         );
 
-
-      // -------------------------------------------------
-      // RESPONSE
-      // -------------------------------------------------
 
       const responseText =
         await response.text();
@@ -369,57 +400,76 @@ export const saveFCMToken =
 
       console.log(
         'Save FCM HTTP status:',
-        response.status
+        response.status,
       );
 
       console.log(
         'Save FCM response:',
-        responseText
+        responseText,
+      );
+
+
+      if (!response.ok) {
+
+        console.log(
+          '❌ FCM token save failed',
+        );
+
+        return null;
+      }
+
+
+      console.log(
+        '✅ FCM token saved successfully',
       );
 
 
       return token;
 
-
     } catch (error) {
 
       console.log(
         '❌ Save FCM Token Error:',
-        error
+        error,
       );
 
       return null;
-
     }
-
   };
 
 
 // =====================================================
 // FCM TOKEN REFRESH
 // =====================================================
-//
-// Firebase kabhi-kabhi FCM token change kar deta hai.
-//
-// New token ko backend me dobara save karenge.
-//
-// =====================================================
 
-export const listenForFCMTokenRefresh =
+let tokenRefreshUnsubscribe =
+  null;
+
+
+export const startFCMTokenRefreshListener =
   email => {
 
     if (!email) {
 
       console.log(
-        'FCM refresh: Email missing'
+        'FCM refresh listener: email missing',
       );
 
       return () => {};
-
     }
 
 
-    const unsubscribe =
+    // Remove previous listener
+    if (tokenRefreshUnsubscribe) {
+
+      tokenRefreshUnsubscribe();
+
+      tokenRefreshUnsubscribe =
+        null;
+    }
+
+
+    tokenRefreshUnsubscribe =
       onTokenRefresh(
         messaging,
 
@@ -428,20 +478,20 @@ export const listenForFCMTokenRefresh =
           try {
 
             console.log(
-              '===================================='
+              '====================================',
             );
 
             console.log(
-              'FCM TOKEN REFRESHED'
+              '🔄 FCM TOKEN REFRESHED',
             );
 
             console.log(
               'New FCM Token:',
-              newToken
+              newToken,
             );
 
             console.log(
-              '===================================='
+              '====================================',
             );
 
 
@@ -449,15 +499,12 @@ export const listenForFCMTokenRefresh =
               await fetch(
                 `${API_URL}/save-dealer-fcm-token`,
                 {
-
                   method:
                     'POST',
 
                   headers: {
-
                     'Content-Type':
                       'application/json',
-
                   },
 
                   body:
@@ -475,8 +522,7 @@ export const listenForFCMTokenRefresh =
                         Platform.OS,
 
                     }),
-
-                }
+                },
               );
 
 
@@ -487,35 +533,184 @@ export const listenForFCMTokenRefresh =
             if (!response.ok) {
 
               console.error(
-                'FCM refresh save failed:',
-                result
+                '❌ Refreshed FCM token save failed:',
+                result,
               );
 
               return;
-
             }
 
 
             console.log(
-              'Refreshed FCM token saved successfully:',
-              result
+              '✅ Refreshed FCM token saved:',
+              result,
             );
-
 
           } catch (error) {
 
             console.error(
-              'FCM token refresh error:',
-              error
+              '❌ FCM token refresh error:',
+              error,
             );
 
           }
 
-        }
-
+        },
       );
 
 
-    return unsubscribe;
+    return tokenRefreshUnsubscribe;
+  };
 
+
+// =====================================================
+// STOP FCM TOKEN REFRESH LISTENER
+// =====================================================
+
+export const stopFCMTokenRefreshListener =
+  () => {
+
+    if (
+      tokenRefreshUnsubscribe
+    ) {
+
+      tokenRefreshUnsubscribe();
+
+      tokenRefreshUnsubscribe =
+        null;
+
+      console.log(
+        'FCM token refresh listener stopped',
+      );
+    }
+  };
+
+
+// =====================================================
+// REMOVE FCM TOKEN FROM BACKEND
+// =====================================================
+
+export const removeFCMTokenFromBackend =
+  async email => {
+
+    try {
+
+      if (!email) {
+        return false;
+      }
+
+
+      const response =
+        await fetch(
+          `${API_URL}/remove-dealer-fcm-token`,
+          {
+            method:
+              'POST',
+
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+
+            body:
+              JSON.stringify({
+
+                email:
+                  String(email)
+                    .trim()
+                    .toLowerCase(),
+
+              }),
+          },
+        );
+
+
+      const result =
+        await response.json();
+
+
+      console.log(
+        'Remove FCM token response:',
+        result,
+      );
+
+
+      return response.ok;
+
+    } catch (error) {
+
+      console.log(
+        '❌ Remove FCM token error:',
+        error,
+      );
+
+      return false;
+    }
+  };
+
+
+// =====================================================
+// DELETE LOCAL FCM TOKEN
+// =====================================================
+
+export const deleteLocalFCMToken =
+  async () => {
+
+    try {
+
+      await messaging.deleteToken();
+
+      console.log(
+        '✅ Local FCM token deleted',
+      );
+
+      return true;
+
+    } catch (error) {
+
+      console.log(
+        '❌ Delete local FCM token error:',
+        error,
+      );
+
+      return false;
+    }
+  };
+
+
+// =====================================================
+// LOGOUT FCM
+// =====================================================
+
+export const logoutFCM =
+  async email => {
+
+    try {
+
+      stopFCMTokenRefreshListener();
+
+
+      if (email) {
+
+        await removeFCMTokenFromBackend(
+          email,
+        );
+
+      }
+
+
+      await deleteLocalFCMToken();
+
+
+      console.log(
+        '✅ FCM logout completed',
+      );
+
+    } catch (error) {
+
+      console.log(
+        '❌ FCM logout error:',
+        error,
+      );
+    }
   };

@@ -24,7 +24,6 @@ import Chatscreen from './src/screens/Chatscreen';
 
 import {
   NavigationContainer,
-  createNavigationContainerRef,
 } from '@react-navigation/native';
 
 

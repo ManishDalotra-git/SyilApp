@@ -32,7 +32,7 @@ import {
 
 import {
   saveFCMToken,
-  listenForFCMTokenRefresh,
+  startFCMTokenRefreshListener,
 } from '../utils/fcm';
 
 

@@ -16,6 +16,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getContactId, setContactId } from '../utils/hiddenFields';
 import { Picker } from '@react-native-picker/picker';
 import { Alert } from 'react-native';
+import {
+  logoutFCM,
+} from '../utils/fcm';
 
 const Profile = ({ navigation }) => {
 
@@ -163,24 +166,100 @@ const Profile = ({ navigation }) => {
       {
         text: 'Logout',
         onPress: async () => {
-          await AsyncStorage.multiRemove([
-            'isLoggedIn',
-            'lastLoginTime',
-            'userEmail',
-            'userData',
-            'userID',
-            'userFirstName',
-            'userLastName',
-            'userBio',
-            'userPhone',
-            'userGender',
-          ]);
-          setContactId(null);
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-          });
+
+  try {
+
+    // -----------------------------------------------
+    // GET CURRENT USER EMAIL
+    // -----------------------------------------------
+
+    const currentEmail =
+      await AsyncStorage.getItem(
+        'userEmail',
+      );
+
+
+    // -----------------------------------------------
+    // REMOVE FCM TOKEN
+    // -----------------------------------------------
+
+    await logoutFCM(
+      currentEmail,
+    );
+
+
+    // -----------------------------------------------
+    // CLEAR USER SESSION
+    // -----------------------------------------------
+
+    await AsyncStorage.multiRemove([
+
+      'isLoggedIn',
+
+      'lastLoginTime',
+
+      'userEmail',
+
+      'userData',
+
+      'userID',
+
+      'userFirstName',
+
+      'userLastName',
+
+      'userBio',
+
+      'userPhone',
+
+      'userGender',
+
+      'app_support_team_member',
+
+    ]);
+
+
+    setContactId(null);
+
+
+    // -----------------------------------------------
+    // GO LOGIN
+    // -----------------------------------------------
+
+    navigation.reset({
+
+      index: 0,
+
+      routes: [
+        {
+          name: 'Login',
         },
+      ],
+
+    });
+
+  } catch (error) {
+
+    console.log(
+      '❌ Logout error:',
+      error,
+    );
+
+    navigation.reset({
+
+      index: 0,
+
+      routes: [
+        {
+          name: 'Login',
+        },
+      ],
+
+    });
+
+  }
+
+}
       },
     ]
   );
