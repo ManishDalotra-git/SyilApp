@@ -11,14 +11,26 @@ import {
   getToken,
   onNotificationOpenedApp,
   onTokenRefresh,
-  registerDeviceForRemoteMessages,
 } from '@react-native-firebase/messaging';
 
 import {openTicketFromNotification} from '../navigation/navigationRef';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+
+// =====================================================
+// FIREBASE
+// =====================================================
+
 const firebaseApp = getApp();
-const messaging = getMessaging(firebaseApp);
+
+const messaging =
+  getMessaging(firebaseApp);
+
+
+// =====================================================
+// BACKEND API
+// =====================================================
 
 const API_URL =
   'https://syilapp-w8ye.onrender.com';
@@ -75,13 +87,23 @@ export const requestNotificationPermission =
         );
       }
 
+
       // -----------------------------------------------
       // ANDROID < 13
       // -----------------------------------------------
 
-      if (Platform.OS === 'android') {
+      if (
+        Platform.OS === 'android'
+      ) {
+
+        console.log(
+          'Android notification permission:',
+          'Not required for Android < 13',
+        );
+
         return true;
       }
+
 
       // -----------------------------------------------
       // iOS
@@ -166,7 +188,9 @@ const handleNotificationOpen =
       openTicketFromNotification({
 
         ticketId:
-          String(data.ticketId),
+          String(
+            data.ticketId,
+          ),
 
         ticketSubject:
           String(
@@ -190,7 +214,6 @@ const handleNotificationOpen =
         '❌ Notification open handler error:',
         error,
       );
-
     }
   };
 
@@ -214,6 +237,7 @@ export const setupNotificationOpenHandlers =
     const unsubscribe =
       onNotificationOpenedApp(
         messaging,
+
         remoteMessage => {
 
           console.log(
@@ -223,7 +247,6 @@ export const setupNotificationOpenHandlers =
           handleNotificationOpen(
             remoteMessage,
           );
-
         },
       );
 
@@ -235,34 +258,38 @@ export const setupNotificationOpenHandlers =
     getInitialNotification(
       messaging,
     )
-      .then(remoteMessage => {
+      .then(
+        remoteMessage => {
 
-        if (!remoteMessage) {
+          if (!remoteMessage) {
+
+            console.log(
+              'ℹ️ No initial notification',
+            );
+
+            return;
+          }
+
 
           console.log(
-            'ℹ️ No initial notification',
+            '📲 Notification opened from QUIT STATE',
           );
 
-          return;
-        }
 
-        console.log(
-          '📲 Notification opened from QUIT STATE',
-        );
+          handleNotificationOpen(
+            remoteMessage,
+          );
+        },
+      )
+      .catch(
+        error => {
 
-        handleNotificationOpen(
-          remoteMessage,
-        );
-
-      })
-      .catch(error => {
-
-        console.log(
-          '❌ getInitialNotification error:',
-          error,
-        );
-
-      });
+          console.log(
+            '❌ getInitialNotification error:',
+            error,
+          );
+        },
+      );
 
 
     return unsubscribe;
@@ -307,15 +334,16 @@ export const saveFCMToken =
 
 
       // -----------------------------------------------
-      // REQUEST NOTIFICATION PERMISSION FIRST
+      // REQUEST NOTIFICATION PERMISSION
       // -----------------------------------------------
 
-      console.log('🔔 Starting FCM permission request...');
+      console.log(
+        '🔔 Starting FCM permission request...',
+      );
+
 
       const permissionGranted =
         await requestNotificationPermission();
-
-      console.log('🔔 Registering device for FCM...');
 
 
       if (!permissionGranted) {
@@ -329,18 +357,13 @@ export const saveFCMToken =
 
 
       // -----------------------------------------------
-      // REGISTER DEVICE
-      // -----------------------------------------------
-
-      await registerDeviceForRemoteMessages();
-
-
-      // -----------------------------------------------
       // GET CURRENT FCM TOKEN
       // -----------------------------------------------
 
+      console.log(
+        '🔔 Requesting FCM token...',
+      );
 
-      console.log('🔔 Requesting FCM token...');
 
       const token =
         await getToken(
@@ -353,6 +376,7 @@ export const saveFCMToken =
         token,
       );
 
+
       if (!token) {
 
         console.log(
@@ -362,10 +386,16 @@ export const saveFCMToken =
         return null;
       }
 
+
+      // -----------------------------------------------
+      // SAVE TOKEN LOCALLY
+      // -----------------------------------------------
+
       await AsyncStorage.setItem(
         'dealer_fcm_token',
         token,
-      ); 
+      );
+
 
       console.log(
         '✅ FCM token saved locally',
@@ -373,10 +403,7 @@ export const saveFCMToken =
 
 
       // -----------------------------------------------
-      // SAVE TOKEN
-      //
-      // IMPORTANT:
-      // Correct backend endpoint
+      // SAVE TOKEN TO BACKEND
       // -----------------------------------------------
 
       const response =
@@ -404,7 +431,6 @@ export const saveFCMToken =
 
                 platform:
                   Platform.OS,
-
               }),
           },
         );
@@ -475,8 +501,13 @@ export const startFCMTokenRefreshListener =
     }
 
 
-    // Remove previous listener
-    if (tokenRefreshUnsubscribe) {
+    // -----------------------------------------------
+    // REMOVE PREVIOUS LISTENER
+    // -----------------------------------------------
+
+    if (
+      tokenRefreshUnsubscribe
+    ) {
 
       tokenRefreshUnsubscribe();
 
@@ -484,6 +515,10 @@ export const startFCMTokenRefreshListener =
         null;
     }
 
+
+    // -----------------------------------------------
+    // START TOKEN REFRESH LISTENER
+    // -----------------------------------------------
 
     tokenRefreshUnsubscribe =
       onTokenRefresh(
@@ -511,6 +546,20 @@ export const startFCMTokenRefreshListener =
             );
 
 
+            // -----------------------------------------
+            // SAVE REFRESHED TOKEN LOCALLY
+            // -----------------------------------------
+
+            await AsyncStorage.setItem(
+              'dealer_fcm_token',
+              newToken,
+            );
+
+
+            // -----------------------------------------
+            // SAVE REFRESHED TOKEN TO BACKEND
+            // -----------------------------------------
+
             const response =
               await fetch(
                 `${API_URL}/save-dealer-fcm-token`,
@@ -536,7 +585,6 @@ export const startFCMTokenRefreshListener =
 
                       platform:
                         Platform.OS,
-
                     }),
                 },
               );
@@ -568,9 +616,7 @@ export const startFCMTokenRefreshListener =
               '❌ FCM token refresh error:',
               error,
             );
-
           }
-
         },
       );
 
@@ -612,6 +658,7 @@ export const removeFCMTokenFromBackend =
     try {
 
       if (!email) {
+
         return false;
       }
 
@@ -676,9 +723,16 @@ export const deleteLocalFCMToken =
 
       await messaging.deleteToken();
 
+
+      await AsyncStorage.removeItem(
+        'dealer_fcm_token',
+      );
+
+
       console.log(
         '✅ Local FCM token deleted',
       );
+
 
       return true;
 
@@ -703,17 +757,28 @@ export const logoutFCM =
 
     try {
 
+      // -----------------------------------------------
+      // STOP TOKEN REFRESH LISTENER
+      // -----------------------------------------------
+
       stopFCMTokenRefreshListener();
 
+
+      // -----------------------------------------------
+      // REMOVE TOKEN FROM BACKEND
+      // -----------------------------------------------
 
       if (email) {
 
         await removeFCMTokenFromBackend(
           email,
         );
-
       }
 
+
+      // -----------------------------------------------
+      // DELETE LOCAL TOKEN
+      // -----------------------------------------------
 
       await deleteLocalFCMToken();
 
