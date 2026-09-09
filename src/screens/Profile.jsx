@@ -291,7 +291,7 @@ const Profile = ({ navigation }) => {
 
           {/* EDIT ICON (same position) */}
           <Pressable
-            style={styles.avatar}
+            style={styles.avatar} 
             onPress={() => setEditVisible(true)}
           >
             <Image

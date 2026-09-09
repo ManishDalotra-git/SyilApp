@@ -15,6 +15,7 @@ import {
 } from '@react-native-firebase/messaging';
 
 import {openTicketFromNotification} from '../navigation/navigationRef';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseApp = getApp();
 const messaging = getMessaging(firebaseApp);
@@ -345,7 +346,6 @@ export const saveFCMToken =
         token,
       );
 
-
       if (!token) {
 
         console.log(
@@ -354,6 +354,15 @@ export const saveFCMToken =
 
         return null;
       }
+
+      await AsyncStorage.setItem(
+        'dealer_fcm_token',
+        token,
+      );
+
+      console.log(
+        '✅ FCM token saved locally',
+      );
 
 
       // -----------------------------------------------

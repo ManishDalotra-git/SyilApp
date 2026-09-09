@@ -364,7 +364,7 @@ const Login = () => {
     // =====================================================
     try {
 
-      listenForFCMTokenRefresh(
+      startFCMTokenRefreshListener(
         normalizedEmail
       );
 
