@@ -14,7 +14,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 import {
   useNavigation,
@@ -58,388 +58,628 @@ const Login = () => {
 
   const handleSubmit = async () => {
 
-  if (!username.trim() || !password) {
-    alert('Please enter email and password');
-    return;
-  }
+    if (!username.trim() || !password) {
+      alert('Please enter email and password');
+      return;
+    }
 
-  setLoading(true);
-
-  try {
-
-    // =====================================================
-    // NORMALIZE EMAIL
-    // =====================================================
-    const normalizedEmail =
-      username.trim().toLowerCase();
-
-    console.log('==========================================');
-    console.log('DEALER LOGIN START');
-    console.log('Email:', normalizedEmail);
-    console.log('==========================================');
-
-
-    // =====================================================
-    // LOGIN API
-    // =====================================================
-    const response = await fetch(
-      'https://syilapp-w8ye.onrender.com/check_login_detail',
-      {
-        method: 'POST',
-
-        headers: {
-          'Content-Type': 'application/json',
-        },
-
-        body: JSON.stringify({
-          email: normalizedEmail,
-          password: password,
-        }),
-      }
-    );
-
-
-    // =====================================================
-    // READ RESPONSE
-    // =====================================================
-    const responseText =
-      await response.text();
-
-    console.log(
-      'Login HTTP status:',
-      response.status
-    );
-
-    console.log(
-      'Login raw response:',
-      responseText
-    );
-
-
-    let result = {};
+    setLoading(true);
 
     try {
 
-      result =
+      // =====================================================
+      // NORMALIZE EMAIL
+      // =====================================================
+
+      const normalizedEmail =
+        username.trim().toLowerCase();
+
+      console.log('==========================================');
+      console.log('DEALER LOGIN START');
+      console.log('Email:', normalizedEmail);
+      console.log('==========================================');
+
+
+      // =====================================================
+      // LOGIN API
+      // =====================================================
+
+      console.log('STEP 0: Calling login API');
+
+      const response = await fetch(
+        'https://syilapp-w8ye.onrender.com/check_login_detail',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type': 'application/json',
+          },
+
+          body: JSON.stringify({
+            email: normalizedEmail,
+            password: password,
+          }),
+        }
+      );
+
+      console.log('STEP 0 COMPLETE: Login API response received');
+
+
+      // =====================================================
+      // READ RESPONSE
+      // =====================================================
+
+      const responseText =
+        await response.text();
+
+      console.log(
+        'Login HTTP status:',
+        response.status
+      );
+
+      console.log(
+        'Login raw response:',
         responseText
-          ? JSON.parse(responseText)
-          : {};
+      );
+
+
+      let result = {};
+
+      try {
+
+        result =
+          responseText
+            ? JSON.parse(responseText)
+            : {};
+
+      } catch (error) {
+
+        console.log(
+          'Login JSON parse error:',
+          error
+        );
+
+        setLoading(false);
+
+        alert(
+          'Invalid server response'
+        );
+
+        return;
+      }
+
+
+      // =====================================================
+      // SERVER LOGIN FAILED
+      // =====================================================
+
+      if (!response.ok) {
+
+        console.log(
+          'Login failed:',
+          result
+        );
+
+        setLoading(false);
+
+        alert(
+          result.message ||
+          'Login failed'
+        );
+
+        return;
+      }
+
+
+      // =====================================================
+      // GET MOBILE APP PERMISSION
+      // =====================================================
+
+      const mobileAppPermission =
+        String(
+          result.user?.mobile_app_permission ?? ''
+        )
+          .trim()
+          .toLowerCase();
+
+
+      console.log(
+        'Mobile App Permission:',
+        mobileAppPermission
+      );
+
+
+      // =====================================================
+      // DEALER APP PERMISSION CHECK
+      // =====================================================
+
+      if (
+        mobileAppPermission !== 'dealer app'
+      ) {
+
+        console.log(
+          'LOGIN BLOCKED: Dealer App permission missing'
+        );
+
+        setLoading(false);
+
+        alert(
+          'You are not authorized to use the Dealer App.'
+        );
+
+        return;
+      }
+
+
+      // =====================================================
+      // LOGIN SUCCESS
+      // =====================================================
+
+      console.log('==========================================');
+      console.log('DEALER LOGIN SUCCESS');
+      console.log('Contact ID:', result.contactId);
+      console.log(
+        'Permission:',
+        result.user?.mobile_app_permission
+      );
+      console.log('==========================================');
+
+
+      // =====================================================
+      // SAVE LOGIN STATE
+      // =====================================================
+
+      console.log('STEP 1: Saving isLoggedIn');
+
+      await AsyncStorage.setItem(
+        'isLoggedIn',
+        'true'
+      );
+
+      console.log('STEP 1 COMPLETE');
+
+
+      console.log('STEP 2: Saving lastLoginTime');
+
+      await AsyncStorage.setItem(
+        'lastLoginTime',
+        Date.now().toString()
+      );
+
+      console.log('STEP 2 COMPLETE');
+
+
+      console.log('STEP 3: Saving userEmail');
+
+      await AsyncStorage.setItem(
+        'userEmail',
+        normalizedEmail
+      );
+
+      console.log('STEP 3 COMPLETE');
+
+
+      // =====================================================
+      // SAVE MOBILE APP PERMISSION
+      // =====================================================
+
+      console.log(
+        'STEP 4: Saving mobile_app_permission'
+      );
+
+      await AsyncStorage.setItem(
+        'mobile_app_permission',
+        String(
+          result.user?.mobile_app_permission ?? ''
+        )
+      );
+
+      console.log('STEP 4 COMPLETE');
+
+
+      // =====================================================
+      // SAVE CONTACT ID
+      // =====================================================
+
+      console.log(
+        'STEP 5: Saving contact ID'
+      );
+
+      setContactId(
+        result.contactId
+      );
+
+      console.log(
+        'STEP 5 COMPLETE'
+      );
+
+
+      // =====================================================
+      // SAVE COMPLETE USER DATA
+      // =====================================================
+
+      console.log(
+        'STEP 6: Saving userData'
+      );
+
+      await AsyncStorage.setItem(
+        'userData',
+        JSON.stringify({
+          ...result.user,
+          contactId: result.contactId,
+        })
+      );
+
+      console.log(
+        'STEP 6 COMPLETE'
+      );
+
+
+      // =====================================================
+      // SAVE INDIVIDUAL USER DATA
+      // =====================================================
+
+      console.log(
+        'STEP 7: Saving userID'
+      );
+
+      await AsyncStorage.setItem(
+        'userID',
+        String(
+          result.contactId ?? ''
+        )
+      );
+
+      console.log(
+        'STEP 7 COMPLETE'
+      );
+
+
+      console.log(
+        'STEP 8: Saving userFirstName'
+      );
+
+      await AsyncStorage.setItem(
+        'userFirstName',
+        String(
+          result.user?.firstName ?? ''
+        )
+      );
+
+      console.log(
+        'STEP 8 COMPLETE'
+      );
+
+
+      console.log(
+        'STEP 9: Saving userLastName'
+      );
+
+      await AsyncStorage.setItem(
+        'userLastName',
+        String(
+          result.user?.lastName ?? ''
+        )
+      );
+
+      console.log(
+        'STEP 9 COMPLETE'
+      );
+
+
+      console.log(
+        'STEP 10: Saving userBio'
+      );
+
+      await AsyncStorage.setItem(
+        'userBio',
+        String(
+          result.user?.bio ?? ''
+        )
+      );
+
+      console.log(
+        'STEP 10 COMPLETE'
+      );
+
+
+      console.log(
+        'STEP 11: Saving userPhone'
+      );
+
+      await AsyncStorage.setItem(
+        'userPhone',
+        String(
+          result.user?.phone ?? ''
+        )
+      );
+
+      console.log(
+        'STEP 11 COMPLETE'
+      );
+
+
+      console.log(
+        'STEP 12: Saving userGender'
+      );
+
+      await AsyncStorage.setItem(
+        'userGender',
+        String(
+          result.user?.gender ?? ''
+        )
+      );
+
+      console.log(
+        'STEP 12 COMPLETE'
+      );
+
+
+      console.log(
+        'STEP 13: Saving app_support_team_member'
+      );
+
+      await AsyncStorage.setItem(
+        'app_support_team_member',
+        String(
+          result.user?.app_support_team_member ?? ''
+        )
+      );
+
+      console.log(
+        'STEP 13 COMPLETE'
+      );
+
+
+      console.log(
+        '=========================================='
+      );
+
+      console.log(
+        'ALL ASYNC STORAGE STEPS COMPLETED'
+      );
+
+      console.log(
+        'NOW GOING TO FCM'
+      );
+
+      console.log(
+        '=========================================='
+      );
+
+
+      // =====================================================
+      // SAVE FCM TOKEN
+      // =====================================================
+
+      console.log(
+        'BEFORE FCM CALL'
+      );
+
+      console.log(
+        'Calling saveFCMToken with:',
+        normalizedEmail
+      );
+
+      console.log(
+        'Platform:',
+        Platform.OS
+      );
+
+
+      try {
+
+        console.log(
+          'FCM: Starting saveFCMToken()...'
+        );
+
+        await saveFCMToken(
+          normalizedEmail
+        );
+
+        console.log(
+          '=========================================='
+        );
+
+        console.log(
+          'FCM CALL COMPLETED SUCCESSFULLY'
+        );
+
+        console.log(
+          '=========================================='
+        );
+
+      } catch (fcmError) {
+
+        console.log(
+          '=========================================='
+        );
+
+        console.log(
+          'FCM CALL FAILED'
+        );
+
+        console.log(
+          'Dealer FCM token save error:',
+          fcmError
+        );
+
+        console.log(
+          'FCM error message:',
+          fcmError?.message
+        );
+
+        console.log(
+          'FCM error stack:',
+          fcmError?.stack
+        );
+
+        console.log(
+          '=========================================='
+        );
+
+        /*
+         * FCM fail hone par login block nahi karna.
+         * User phir bhi app use kar sakta hai.
+         */
+
+      }
+
+
+      // =====================================================
+      // LISTEN FOR FCM TOKEN REFRESH
+      // =====================================================
+
+      console.log(
+        '=========================================='
+      );
+
+      console.log(
+        'BEFORE FCM REFRESH LISTENER'
+      );
+
+
+      try {
+
+        console.log(
+          'Starting FCM token refresh listener...'
+        );
+
+        startFCMTokenRefreshListener(
+          normalizedEmail
+        );
+
+        console.log(
+          'FCM REFRESH LISTENER STARTED'
+        );
+
+      } catch (fcmRefreshError) {
+
+        console.log(
+          'FCM refresh listener error:',
+          fcmRefreshError
+        );
+
+        console.log(
+          'FCM refresh error message:',
+          fcmRefreshError?.message
+        );
+
+        console.log(
+          'FCM refresh error stack:',
+          fcmRefreshError?.stack
+        );
+      }
+
+
+      console.log(
+        'AFTER FCM REFRESH LISTENER'
+      );
+
+      console.log(
+        '=========================================='
+      );
+
+
+      // =====================================================
+      // DEBUG SAVED DATA
+      // =====================================================
+
+      console.log(
+        'STEP 14: Reading saved data'
+      );
+
+      const savedPermission =
+        await AsyncStorage.getItem(
+          'mobile_app_permission'
+        );
+
+
+      const savedUserID =
+        await AsyncStorage.getItem(
+          'userID'
+        );
+
+
+      const savedEmail =
+        await AsyncStorage.getItem(
+          'userEmail'
+        );
+
+
+      console.log(
+        'Saved Permission:',
+        savedPermission
+      );
+
+      console.log(
+        'Saved User ID:',
+        savedUserID
+      );
+
+      console.log(
+        'Saved Email:',
+        savedEmail
+      );
+
+
+      // =====================================================
+      // GO TO HOME
+      // =====================================================
+
+      console.log(
+        'STEP 15: Going to Home'
+      );
+
+      setLoading(false);
+
+      navigation.replace(
+        'Home'
+      );
+
+
+      console.log(
+        'STEP 15 COMPLETE: Home navigation triggered'
+      );
+
 
     } catch (error) {
 
       console.log(
-        'Login JSON parse error:',
+        '=========================================='
+      );
+
+      console.log(
+        'DEALER LOGIN ERROR'
+      );
+
+      console.log(
+        'Error:',
         error
       );
 
-      setLoading(false);
-
-      alert(
-        'Invalid server response'
+      console.log(
+        'Error message:',
+        error?.message
       );
 
-      return;
-    }
-
-
-    // =====================================================
-    // SERVER LOGIN FAILED
-    // =====================================================
-    if (!response.ok) {
+      console.log(
+        'Error stack:',
+        error?.stack
+      );
 
       console.log(
-        'Login failed:',
-        result
+        '=========================================='
       );
 
       setLoading(false);
 
       alert(
-        result.message ||
-        'Login failed'
-      );
-
-      return;
-    }
-
-
-    // =====================================================
-    // GET MOBILE APP PERMISSION
-    // =====================================================
-    const mobileAppPermission =
-      String(
-        result.user?.mobile_app_permission ?? ''
-      )
-        .trim()
-        .toLowerCase();
-
-
-    console.log(
-      'Mobile App Permission:',
-      mobileAppPermission
-    );
-
-
-    // =====================================================
-    // DEALER APP PERMISSION CHECK
-    // =====================================================
-    if (
-      mobileAppPermission !== 'dealer app'
-    ) {
-
-      console.log(
-        'LOGIN BLOCKED: Dealer App permission missing'
-      );
-
-      setLoading(false);
-
-      alert(
-        'You are not authorized to use the Dealer App.'
-      );
-
-      return;
-    }
-
-
-    // =====================================================
-    // LOGIN SUCCESS
-    // =====================================================
-    console.log('==========================================');
-    console.log('DEALER LOGIN SUCCESS');
-    console.log('Contact ID:', result.contactId);
-    console.log(
-      'Permission:',
-      result.user?.mobile_app_permission
-    );
-    console.log('==========================================');
-
-
-    // =====================================================
-    // SAVE LOGIN STATE
-    // =====================================================
-    await AsyncStorage.setItem(
-      'isLoggedIn',
-      'true'
-    );
-
-
-    await AsyncStorage.setItem(
-      'lastLoginTime',
-      Date.now().toString()
-    );
-
-
-    await AsyncStorage.setItem(
-      'userEmail',
-      normalizedEmail
-    );
-
-
-    // =====================================================
-    // SAVE MOBILE APP PERMISSION
-    // =====================================================
-    await AsyncStorage.setItem(
-      'mobile_app_permission',
-      String(
-        result.user?.mobile_app_permission ?? ''
-      )
-    );
-
-
-    // =====================================================
-    // SAVE CONTACT ID
-    // =====================================================
-    setContactId(
-      result.contactId
-    );
-
-
-    // =====================================================
-    // SAVE COMPLETE USER DATA
-    // =====================================================
-    await AsyncStorage.setItem(
-      'userData',
-      JSON.stringify({
-        ...result.user,
-
-        contactId:
-          result.contactId,
-      })
-    );
-
-
-    // =====================================================
-    // SAVE INDIVIDUAL USER DATA
-    // =====================================================
-    await AsyncStorage.setItem(
-      'userID',
-      String(
-        result.contactId ?? ''
-      )
-    );
-
-
-    await AsyncStorage.setItem(
-      'userFirstName',
-      String(
-        result.user?.firstName ?? ''
-      )
-    );
-
-
-    await AsyncStorage.setItem(
-      'userLastName',
-      String(
-        result.user?.lastName ?? ''
-      )
-    );
-
-
-    await AsyncStorage.setItem(
-      'userBio',
-      String(
-        result.user?.bio ?? ''
-      )
-    );
-
-
-    await AsyncStorage.setItem(
-      'userPhone',
-      String(
-        result.user?.phone ?? ''
-      )
-    );
-
-
-    await AsyncStorage.setItem(
-      'userGender',
-      String(
-        result.user?.gender ?? ''
-      )
-    );
-
-
-    await AsyncStorage.setItem(
-      'app_support_team_member',
-      String(
-        result.user?.app_support_team_member ?? ''
-      )
-    );
-
-
-    console.log(
-      'Dealer login data saved in AsyncStorage'
-    );
-
-
-    // =====================================================
-    // SAVE FCM TOKEN
-    // =====================================================
-    try {
-
-      await saveFCMToken(
-        normalizedEmail
-      );
-
-      console.log(
-        'Dealer FCM token save completed'
-      );
-
-    } catch (fcmError) {
-
-      console.log(
-        'Dealer FCM token save error:',
-        fcmError
-      );
-
-      /*
-       * FCM fail hone par login block nahi karna.
-       * User phir bhi app use kar sakta hai.
-       */
-    }
-
-
-    // =====================================================
-    // LISTEN FOR FCM TOKEN REFRESH
-    // =====================================================
-    try {
-
-      startFCMTokenRefreshListener(
-        normalizedEmail
-      );
-
-      console.log(
-        'Dealer FCM token refresh listener started'
-      );
-
-    } catch (fcmRefreshError) {
-
-      console.log(
-        'FCM refresh listener error:',
-        fcmRefreshError
+        'Network error'
       );
     }
+  };
 
-
-    // =====================================================
-    // DEBUG SAVED DATA
-    // =====================================================
-    const savedPermission =
-      await AsyncStorage.getItem(
-        'mobile_app_permission'
-      );
-
-    const savedUserID =
-      await AsyncStorage.getItem(
-        'userID'
-      );
-
-    const savedEmail =
-      await AsyncStorage.getItem(
-        'userEmail'
-      );
-
-
-    console.log(
-      'Saved Permission:',
-      savedPermission
-    );
-
-    console.log(
-      'Saved User ID:',
-      savedUserID
-    );
-
-    console.log(
-      'Saved Email:',
-      savedEmail
-    );
-
-
-    // =====================================================
-    // GO TO HOME
-    // =====================================================
-    setLoading(false);
-
-    navigation.replace(
-      'Home'
-    );
-
-
-  } catch (error) {
-
-    console.log(
-      'DEALER LOGIN ERROR:',
-      error
-    );
-
-    setLoading(false);
-
-    alert(
-      'Network error'
-    );
-  }
-};
 
   /*
    * ============================================================
@@ -484,7 +724,7 @@ const Login = () => {
 
             <Image
               source={require(
-                '../../images/syil_logo_white.png',
+                '../../images/syil_logo_white.png'
               )}
               style={styles.logo}
             />
@@ -588,10 +828,10 @@ const Login = () => {
                   source={
                     secure
                       ? require(
-                          '../../images/hide_icon.png',
+                          '../../images/hide_icon.png'
                         )
                       : require(
-                          '../../images/show_icon.png',
+                          '../../images/show_icon.png'
                         )
                   }
                   style={[
@@ -612,7 +852,7 @@ const Login = () => {
             <Text
               onPress={() =>
                 navigation.navigate(
-                  'ForgotPassword',
+                  'ForgotPassword'
                 )
               }
               style={styles.forgot}
@@ -653,7 +893,7 @@ const Login = () => {
             style={styles.footer}
             onPress={() =>
               Linking.openURL(
-                'mailto:support@syil.com',
+                'mailto:support@syil.com'
               )
             }
           >
@@ -667,6 +907,7 @@ const Login = () => {
             </Text>
 
           </Text>
+
 
         </ScrollView>
 
@@ -696,6 +937,7 @@ const Login = () => {
           </View>
 
         </Modal>
+
 
       </KeyboardAvoidingView>
 
