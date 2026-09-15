@@ -56,6 +56,8 @@ const Login = () => {
    * ============================================================
    */
 
+  console.log('RELEASE FCM TEST V1 - LOGIN HANDLE SUBMIT RUNNING');
+
   const handleSubmit = async () => {
 
     if (!username.trim() || !password) {
@@ -455,50 +457,39 @@ const Login = () => {
       console.log(
         'BEFORE FCM CALL'
       );
-
       console.log(
         'Calling saveFCMToken with:',
         normalizedEmail
       );
-
       console.log(
         'Platform:',
         Platform.OS
       );
 
-
       try {
-
         console.log(
           'FCM: Starting saveFCMToken()...'
         );
-
+        console.log('RELEASE FCM TEST V2 - ABOUT TO CALL SAVETOKEN');
         await saveFCMToken(
           normalizedEmail
         );
-
         console.log(
           '=========================================='
         );
-
         console.log(
           'FCM CALL COMPLETED SUCCESSFULLY'
         );
-
         console.log(
           '=========================================='
         );
-
       } catch (fcmError) {
-
         console.log(
           '=========================================='
         );
-
         console.log(
           'FCM CALL FAILED'
         );
-
         console.log(
           'Dealer FCM token save error:',
           fcmError
@@ -508,21 +499,17 @@ const Login = () => {
           'FCM error message:',
           fcmError?.message
         );
-
         console.log(
           'FCM error stack:',
           fcmError?.stack
         );
-
         console.log(
           '=========================================='
         );
-
         /*
          * FCM fail hone par login block nahi karna.
          * User phir bhi app use kar sakta hai.
          */
-
       }
 
 

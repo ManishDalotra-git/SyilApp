@@ -263,7 +263,6 @@ export const openPendingTicket =
       pendingTicketData =
         null;
 
-
       // -------------------------------------------------
       // OPEN TICKET
       // -------------------------------------------------
@@ -272,21 +271,14 @@ export const openPendingTicket =
         '➡️ Opening pending notification ticket:',
         ticket
       );
-
-
       navigationRef.navigate(
         'ViewTicketDetail',
         ticket
       );
-
-
     } catch (error) {
-
       console.log(
         '❌ openPendingTicket error:',
         error
       );
-
     }
-
   };
