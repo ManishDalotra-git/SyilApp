@@ -21,7 +21,7 @@ const firebaseServiceAccount = JSON.parse(
 );
 
 if (getApps().length === 0) {
-  initializeApp({
+  initializeApp({ 
     credential: cert(firebaseServiceAccount),
   });
 }
