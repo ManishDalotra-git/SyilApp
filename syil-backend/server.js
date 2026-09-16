@@ -3219,6 +3219,12 @@ app.post('/hubspot-webhook', async (req, res) => {
           ),
       },
 
+      android: {
+        notification: {
+          tag: `FCM-Ticket:${ticketId}:${latestMessage.id}`,
+        },
+      },
+
       data: {
 
         ticketId:

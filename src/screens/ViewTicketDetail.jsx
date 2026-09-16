@@ -23,6 +23,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Footer from './components/Footer';
 import Video from 'react-native-video';
+import {NativeModules} from 'react-native';
 
 const ViewTicketDetail = ({ navigation }) => {
   StatusBar.setTranslucent(true);
@@ -30,6 +31,7 @@ const ViewTicketDetail = ({ navigation }) => {
   StatusBar.setBarStyle('dark-content');
 
   const route = useRoute();
+  const {NotificationBadge} = NativeModules;
 
   const { ticketId, subject } = route.params || {};
   const currentRoute = route.name;
@@ -213,19 +215,14 @@ const ViewTicketDetail = ({ navigation }) => {
         return;
       }
 
-      console.log(
-        '✅ Ticket marked as read successfully'
+      console.log( '✅ Ticket marked as read successfully' );
+      console.log( 'Ticket unread count:', data.ticketUnreadCount );
+      console.log( 'Total unread count:', data.totalUnreadCount );
+
+       NotificationBadge?.cancelTicketNotifications?.(
+        String(ticketId)
       );
 
-      console.log(
-        'Ticket unread count:',
-        data.ticketUnreadCount
-      );
-
-      console.log(
-        'Total unread count:',
-        data.totalUnreadCount
-      );
     } catch (error) {
       console.log(
         '❌ Mark ticket read error:',
