@@ -219,9 +219,22 @@ const ViewTicketDetail = ({ navigation }) => {
       console.log( 'Ticket unread count:', data.ticketUnreadCount );
       console.log( 'Total unread count:', data.totalUnreadCount );
 
-       NotificationBadge?.cancelTicketNotifications?.(
+      const totalUnreadCount = Number(data.totalUnreadCount || 0);
+
+      console.log(
+        'Updating app badge to:',
+        totalUnreadCount
+      );
+
+      NotificationBadge?.cancelTicketNotifications?.(
         String(ticketId)
       );
+
+      if (totalUnreadCount > 0) {
+        NotificationBadge?.setBadge?.(totalUnreadCount);
+      } else {
+        NotificationBadge?.clearBadge?.();
+      }
 
     } catch (error) {
       console.log(
