@@ -245,10 +245,8 @@ const ViewTicketDetail = ({ navigation }) => {
             contactID,
           }
         );
-
         return;
       }
-
       markTicketAsRead();
     }, [ticketId, contactID])
   );
@@ -264,10 +262,8 @@ const ViewTicketDetail = ({ navigation }) => {
           if (!ticketId) {
             return;
           }
-
           try {
             setLoading(true);
-
             const response =
               await fetch(
                 'https://syilapp-w8ye.onrender.com/get_ticket_conversation',
@@ -285,12 +281,10 @@ const ViewTicketDetail = ({ navigation }) => {
 
             const data =
               await response.json();
-
             console.log(
               'Conversation data----- ',
               data
             );
-
             setMessages(
               data.messages || []
             );
