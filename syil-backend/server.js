@@ -3203,117 +3203,113 @@ app.post('/hubspot-webhook', async (req, res) => {
             try {
 
   const messageId =
-    await getMessaging().send({
+  await getMessaging().send({
 
-      token:
-        recipient.token,
+    token: recipient.token,
 
-      notification: {
-        title:
-          notificationTitle,
+    android: {
+      priority: 'high',
+    },
 
-        body:
+    data: {
+
+      notificationTitle:
+        String(notificationTitle),
+
+      notificationBody:
+        String(
           notificationBody.slice(
             0,
             200,
           ),
+        ),
+
+      ticketId:
+        String(ticketId),
+
+      threadId:
+        String(threadId),
+
+      messageId:
+        String(
+          latestMessage.id,
+        ),
+
+      ticketSubject:
+        String(
+          ticketSubject,
+        ),
+
+      senderEmail:
+        String(
+          senderEmail,
+        ),
+
+      senderRole:
+        String(
+          senderRole,
+        ),
+
+      appSupportTeamMember:
+        senderIsSupport
+          ? 'Yes'
+          : 'No',
+
+      direction:
+        String(
+          latestMessage.direction,
+        ),
+
+      targetScreen:
+        'ViewTicketDetail',
+
+      type:
+        senderIsSupport
+          ? 'support_message'
+          : 'customer_message',
+
+      ticketUnreadCount:
+        String(
+          newTicketUnreadCount,
+        ),
+
+      totalUnreadCount:
+        String(
+          totalUnreadCount,
+        ),
+    },
+
+    apns: {
+      headers: {
+        'apns-priority':
+          '10',
       },
 
-      android: {
-        notification: {
-          tag: `FCM-Ticket:${ticketId}:${latestMessage.id}`,
-        },
-      },
+      payload: {
+        aps: {
 
-      data: {
+          alert: {
+            title:
+              notificationTitle,
 
-        ticketId:
-          String(ticketId),
-
-        threadId:
-          String(threadId),
-
-        messageId:
-          String(
-            latestMessage.id,
-          ),
-
-        ticketSubject:
-          String(
-            ticketSubject,
-          ),
-
-        senderEmail:
-          String(
-            senderEmail,
-          ),
-
-        senderRole:
-          String(
-            senderRole,
-          ),
-
-        appSupportTeamMember:
-          senderIsSupport
-            ? 'Yes'
-            : 'No',
-
-        direction:
-          String(
-            latestMessage.direction,
-          ),
-
-        targetScreen:
-          'ViewTicketDetail',
-
-        type:
-          senderIsSupport
-            ? 'support_message'
-            : 'customer_message',
-
-        ticketUnreadCount:
-          String(
-            newTicketUnreadCount,
-          ),
-
-        totalUnreadCount:
-          String(
-            totalUnreadCount,
-          ),
-      },
-
-      apns: {
-        headers: {
-          'apns-priority':
-            '10',
-        },
-
-        payload: {
-          aps: {
-
-            alert: {
-              title:
-                notificationTitle,
-
-              body:
-                notificationBody.slice(
-                  0,
-                  200,
-                ),
-            },
-
-            sound:
-              'default',
-
-            badge:
-              totalUnreadCount,
-
+            body:
+              notificationBody.slice(
+                0,
+                200,
+              ),
           },
+
+          sound:
+            'default',
+
+          badge:
+            totalUnreadCount,
         },
       },
+    },
 
-    });
-
+  });
+ 
 
   return messageId;
 

@@ -14,9 +14,6 @@ class NotificationBadgeModule(
         return "NotificationBadge"
     }
 
-    /**
-     * Cancel all notifications belonging to a specific ticket.
-     */
     @ReactMethod
     fun cancelTicketNotifications(ticketId: String) {
 
@@ -26,19 +23,20 @@ class NotificationBadgeModule(
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
 
-            val activeNotifications = notificationManager.activeNotifications
+            val activeNotifications =
+                notificationManager.activeNotifications
 
             val ticketPrefix = "FCM-Ticket:$ticketId:"
 
-            activeNotifications.forEach { statusBarNotification ->
+            activeNotifications.forEach { notification ->
 
-                val tag = statusBarNotification.tag
+                val tag = notification.tag
 
                 if (tag != null && tag.startsWith(ticketPrefix)) {
 
                     notificationManager.cancel(
                         tag,
-                        statusBarNotification.id
+                        notification.id
                     )
 
                     android.util.Log.d(
@@ -50,15 +48,6 @@ class NotificationBadgeModule(
         }
     }
 
-    /**
-     * Update app badge count.
-     *
-     * Android does not provide a universal API for setting
-     * launcher badge numbers across all devices.
-     *
-     * This method currently updates notification badge
-     * behaviour through the notification manager where supported.
-     */
     @ReactMethod
     fun setBadge(count: Int) {
 
@@ -66,22 +55,25 @@ class NotificationBadgeModule(
 
         android.util.Log.d(
             "NotificationBadge",
-            "Requested badge count: $safeCount"
+            "Badge requested: $safeCount"
         )
 
-        // Android launcher badge behaviour is OEM dependent.
-        // Notification badges are normally derived from
-        // active notifications.
+        /*
+         * Android launcher badges are derived from
+         * active notifications and are launcher/OEM dependent.
+         *
+         * The native FCM service creates notifications with
+         * setNumber() so supported launchers can display
+         * the notification count.
+         */
     }
 
-    /**
-     * Clear badge.
-     */
     @ReactMethod
     fun clearBadge() {
+
         android.util.Log.d(
             "NotificationBadge",
-            "Requested badge clear"
+            "Badge clear requested"
         )
     }
 }
