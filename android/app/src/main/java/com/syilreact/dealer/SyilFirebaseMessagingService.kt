@@ -109,8 +109,7 @@ class SyilFirebaseMessagingService : FirebaseMessagingService() {
             body = body,
             ticketId = ticketId,
             ticketSubject = ticketSubject,
-            threadId = threadId,
-            unreadCount = totalUnreadCount
+            threadId = threadId
         )
     }
 
@@ -145,8 +144,7 @@ class SyilFirebaseMessagingService : FirebaseMessagingService() {
         body: String,
         ticketId: String,
         ticketSubject: String,
-        threadId: String,
-        unreadCount: Int
+        threadId: String
     ) {
 
         val notificationManager =
@@ -154,12 +152,6 @@ class SyilFirebaseMessagingService : FirebaseMessagingService() {
                 NotificationManager::class.java
             )
 
-        /*
-         * Open MainActivity.
-         *
-         * Existing React Native notification-open
-         * handling will process the notification data.
-         */
         val intent = Intent(
             this,
             MainActivity::class.java
@@ -200,11 +192,19 @@ class SyilFirebaseMessagingService : FirebaseMessagingService() {
             )
 
         /*
-         * Use message ID as the notification ID.
+         * Every message gets its own notification.
          *
-         * This allows multiple messages to have
-         * separate notifications.
+         * IMPORTANT:
+         * Do NOT use setNumber(totalUnreadCount) here.
+         *
+         * Android launchers may aggregate the numbers from
+         * all active notifications. If we used:
+         *
+         * 1 + 2 + 3 + 4
+         *
+         * the launcher could show 10 instead of 4.
          */
+
         val notificationId =
             System.currentTimeMillis().toInt()
 
@@ -228,9 +228,6 @@ class SyilFirebaseMessagingService : FirebaseMessagingService() {
                 .setAutoCancel(true)
                 .setContentIntent(
                     pendingIntent
-                )
-                .setNumber(
-                    unreadCount
                 )
                 .setShowWhen(true)
                 .build()
@@ -257,11 +254,6 @@ class SyilFirebaseMessagingService : FirebaseMessagingService() {
         Log.d(
             TAG,
             "Notification ID: $notificationId"
-        )
-
-        Log.d(
-            TAG,
-            "Unread count: $unreadCount"
         )
     }
 }
