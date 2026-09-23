@@ -2,6 +2,8 @@ import {
   Platform,
   PermissionsAndroid,
   NativeModules,
+  AppState,
+  DeviceEventEmitter,
 } from 'react-native';
 
 import {getApp} from '@react-native-firebase/app';
@@ -28,16 +30,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // NATIVE MODULE
 // =====================================================
 
-const {NotificationBadge} = NativeModules;
+const {
+  NotificationBadge,
+} = NativeModules;
 
 
 // =====================================================
 // FIREBASE
 // =====================================================
 
-const firebaseApp = getApp();
+const firebaseApp =
+  getApp();
 
-const messaging = getMessaging(firebaseApp);
+const messaging =
+  getMessaging(firebaseApp);
 
 
 // =====================================================
@@ -56,6 +62,10 @@ export const requestNotificationPermission =
   async () => {
 
     try {
+
+      // -------------------------------------------------
+      // Android
+      // -------------------------------------------------
 
       if (Platform.OS === 'android') {
 
@@ -78,16 +88,19 @@ export const requestNotificationPermission =
               },
             );
 
+
           console.log(
             'Android notification permission:',
             result,
           );
+
 
           return (
             result ===
             PermissionsAndroid.RESULTS.GRANTED
           );
         }
+
 
         return true;
       }
@@ -98,7 +111,10 @@ export const requestNotificationPermission =
       // -------------------------------------------------
 
       const authStatus =
-        await requestPermission(messaging);
+        await requestPermission(
+          messaging,
+        );
+
 
       const enabled =
         authStatus ===
@@ -106,10 +122,12 @@ export const requestNotificationPermission =
         authStatus ===
           AuthorizationStatus.PROVISIONAL;
 
+
       console.log(
         'iOS notification permission:',
         authStatus,
       );
+
 
       return enabled;
 
@@ -119,6 +137,7 @@ export const requestNotificationPermission =
         '❌ Notification permission error:',
         error?.message || error,
       );
+
 
       return false;
     }
@@ -150,9 +169,11 @@ const handleNotificationOpen =
         '==========================================',
       );
 
+
       console.log(
         '🔔 NOTIFICATION OPENED',
       );
+
 
       console.log(
         'Remote message:',
@@ -181,6 +202,7 @@ const handleNotificationOpen =
         console.log(
           '⚠️ Notification has no ticketId',
         );
+
 
         return;
       }
@@ -243,7 +265,7 @@ const handleNotificationOpen =
 //
 // =====================================================
 
-const checkPendingNotification =
+export const checkPendingNotification =
   async () => {
 
     try {
@@ -251,6 +273,7 @@ const checkPendingNotification =
       console.log(
         '==========================================',
       );
+
 
       console.log(
         '🔔 CHECKING NATIVE PENDING NOTIFICATION',
@@ -269,6 +292,7 @@ const checkPendingNotification =
         console.log(
           '⚠️ NotificationBadge.getPendingNotification not available',
         );
+
 
         return;
       }
@@ -300,6 +324,7 @@ const checkPendingNotification =
         console.log(
           'ℹ️ No pending native notification',
         );
+
 
         return;
       }
@@ -369,26 +394,114 @@ export const setupNotificationOpenHandlers =
       '==========================================',
     );
 
+
     console.log(
-      '🔔 SETTING UP NOTIFICATION OPEN HANDLERS',
+      'SETTING UP NOTIFICATION OPEN HANDLERS',
+    );
+
+
+    console.log(
+      '==========================================',
     );
 
 
     // -------------------------------------------------
-    // CUSTOM NATIVE NOTIFICATION
-    // -------------------------------------------------
-    //
-    // App completely closed tha aur notification
-    // click hui ho to MainActivity ne data native
-    // side par save kiya hoga.
-    //
+    // CHECK PENDING NATIVE NOTIFICATION
     // -------------------------------------------------
 
     checkPendingNotification();
 
 
+    // =================================================
+    // DIRECT NATIVE NOTIFICATION CLICK EVENT
+    // =================================================
+
+    const notificationClickedSubscription =
+      DeviceEventEmitter.addListener(
+        'notificationClicked',
+        data => {
+
+          console.log(
+            '==========================================',
+          );
+
+
+          console.log(
+            '🔔 NATIVE NOTIFICATION CLICK EVENT',
+          );
+
+
+          console.log(
+            '==========================================',
+          );
+
+
+          console.log(
+            'Notification click data:',
+            data,
+          );
+
+
+          // -------------------------------------------
+          // Check ticket ID
+          // -------------------------------------------
+
+          if (
+            !data?.ticketId
+          ) {
+
+            console.log(
+              '❌ Native notification event has no ticketId',
+            );
+
+
+            return;
+          }
+
+
+          // -------------------------------------------
+          // Prepare ticket data
+          // -------------------------------------------
+
+          const ticketData = {
+
+            ticketId:
+              String(
+                data.ticketId,
+              ),
+
+            ticketSubject:
+              data.ticketSubject ||
+              '',
+
+            threadId:
+              data.threadId ||
+              '',
+
+            fromNotification:
+              true,
+          };
+
+
+          console.log(
+            '🚀 Opening ticket from native click event:',
+            ticketData,
+          );
+
+
+          // -------------------------------------------
+          // Open ticket
+          // -------------------------------------------
+
+          openTicketFromNotification(
+            ticketData,
+          );
+        },
+      );
+
+
     // -------------------------------------------------
-    // RNFIREBASE BACKGROUND NOTIFICATION
+    // FCM NOTIFICATION OPEN HANDLER
     // -------------------------------------------------
 
     const unsubscribeOpenedApp =
@@ -397,8 +510,19 @@ export const setupNotificationOpenHandlers =
         remoteMessage => {
 
           console.log(
-            '🔔 App opened from background notification',
+            '==========================================',
           );
+
+
+          console.log(
+            'FCM NOTIFICATION OPENED APP',
+          );
+
+
+          console.log(
+            '==========================================',
+          );
+
 
           handleNotificationOpen(
             remoteMessage,
@@ -408,57 +532,114 @@ export const setupNotificationOpenHandlers =
 
 
     // -------------------------------------------------
-    // RNFIREBASE QUIT-STATE NOTIFICATION
+    // INITIAL NOTIFICATION
     // -------------------------------------------------
 
-    getInitialNotification(messaging)
-      .then(remoteMessage => {
-
-        if (remoteMessage) {
+    getInitialNotification(
+      messaging,
+    )
+      .then(
+        remoteMessage => {
 
           console.log(
-            '🔔 App opened from quit-state notification',
-          );
-
-          handleNotificationOpen(
+            'INITIAL FCM NOTIFICATION:',
             remoteMessage,
           );
 
-        } else {
+
+          if (remoteMessage) {
+
+            handleNotificationOpen(
+              remoteMessage,
+            );
+          }
+        },
+      )
+      .catch(
+        error => {
 
           console.log(
-            'ℹ️ No RNFirebase initial notification',
+            '❌ getInitialNotification error:',
+            error?.message ||
+              error,
           );
-        }
-      })
-      .catch(error => {
-
-        console.log(
-          '❌ Initial notification error:',
-          error?.message || error,
-        );
-      });
+        },
+      );
 
 
-    console.log(
-      '==========================================',
-    );
+    // =================================================
+    // APP STATE LISTENER
+    // =================================================
+
+    let currentAppState =
+      AppState.currentState;
 
 
-    // -------------------------------------------------
+    const appStateSubscription =
+      AppState.addEventListener(
+        'change',
+        nextAppState => {
+
+          console.log(
+            'APP STATE:',
+            currentAppState,
+            '→',
+            nextAppState,
+          );
+
+
+          // -------------------------------------------------
+          // App comes back to foreground
+          // -------------------------------------------------
+
+          if (
+            currentAppState !== 'active' &&
+            nextAppState === 'active'
+          ) {
+
+            console.log(
+              '🔔 APP BECAME ACTIVE - CHECKING PENDING NOTIFICATION',
+            );
+
+
+            setTimeout(
+              () => {
+
+                checkPendingNotification();
+
+              },
+              300,
+            );
+          }
+
+
+          currentAppState =
+            nextAppState;
+        },
+      );
+
+
+    // =================================================
     // CLEANUP
-    // -------------------------------------------------
+    // =================================================
 
     return () => {
 
-      if (unsubscribeOpenedApp) {
+      console.log(
+        'CLEANING NOTIFICATION OPEN HANDLERS',
+      );
 
-        unsubscribeOpenedApp();
 
-        console.log(
-          '🛑 Notification open listener removed',
-        );
-      }
+      // Native event listener
+      notificationClickedSubscription?.remove();
+
+
+      // Firebase listener
+      unsubscribeOpenedApp?.();
+
+
+      // AppState listener
+      appStateSubscription?.remove();
     };
   };
 
@@ -478,6 +659,7 @@ export const saveFCMToken =
           '❌ Cannot save FCM token: email missing',
         );
 
+
         return null;
       }
 
@@ -492,14 +674,17 @@ export const saveFCMToken =
         '======================================',
       );
 
+
       console.log(
         'SAVING FCM TOKEN',
       );
+
 
       console.log(
         'Email:',
         normalizedEmail,
       );
+
 
       console.log(
         '======================================',
@@ -531,12 +716,13 @@ export const saveFCMToken =
           '❌ Notification permission denied. FCM token will not be requested.',
         );
 
+
         return null;
       }
 
 
       // ---------------------------------------------------
-      // STEP 2: Register device for remote messages
+      // STEP 2: Register device for FCM
       // ---------------------------------------------------
 
       console.log(
@@ -549,6 +735,7 @@ export const saveFCMToken =
         await registerDeviceForRemoteMessages(
           messaging,
         );
+
 
         console.log(
           '✅ Device registered for FCM remote messages',
@@ -574,7 +761,9 @@ export const saveFCMToken =
 
 
       const token =
-        await getToken(messaging);
+        await getToken(
+          messaging,
+        );
 
 
       if (!token) {
@@ -583,6 +772,7 @@ export const saveFCMToken =
           '❌ FCM token is EMPTY',
         );
 
+
         return null;
       }
 
@@ -590,6 +780,7 @@ export const saveFCMToken =
       console.log(
         '✅ FCM token generated',
       );
+
 
       console.log(
         'FCM TOKEN:',
@@ -681,8 +872,10 @@ export const saveFCMToken =
 
       console.log(
         '❌ FCM token error:',
-        error?.message || error,
+        error?.message ||
+          error,
       );
+
 
       return null;
     }
@@ -707,7 +900,9 @@ export const startFCMTokenRefreshListener =
       }
 
 
-      if (unsubscribeTokenRefresh) {
+      if (
+        unsubscribeTokenRefresh
+      ) {
 
         unsubscribeTokenRefresh();
 
@@ -789,7 +984,8 @@ export const startFCMTokenRefreshListener =
 
               console.log(
                 '❌ FCM token refresh save error:',
-                error?.message || error,
+                error?.message ||
+                  error,
               );
             }
           },
@@ -799,7 +995,8 @@ export const startFCMTokenRefreshListener =
 
       console.log(
         '❌ FCM refresh listener error:',
-        error?.message || error,
+        error?.message ||
+          error,
       );
     }
   };
@@ -814,12 +1011,15 @@ export const stopFCMTokenRefreshListener =
 
     try {
 
-      if (unsubscribeTokenRefresh) {
+      if (
+        unsubscribeTokenRefresh
+      ) {
 
         unsubscribeTokenRefresh();
 
         unsubscribeTokenRefresh =
           null;
+
 
         console.log(
           '🛑 FCM token refresh listener stopped',
@@ -830,7 +1030,8 @@ export const stopFCMTokenRefreshListener =
 
       console.log(
         '❌ Stop FCM listener error:',
-        error?.message || error,
+        error?.message ||
+          error,
       );
     }
   };
@@ -850,6 +1051,7 @@ export const removeFCMTokenFromBackend =
         console.log(
           '❌ Cannot remove FCM token: email missing',
         );
+
 
         return false;
       }
@@ -907,8 +1109,10 @@ export const removeFCMTokenFromBackend =
 
       console.log(
         '❌ Remove FCM token error:',
-        error?.message || error,
+        error?.message ||
+          error,
       );
+
 
       return false;
     }
@@ -948,7 +1152,8 @@ export const deleteLocalFCMToken =
 
       console.log(
         '❌ Delete local FCM token error:',
-        error?.message || error,
+        error?.message ||
+          error,
       );
 
 
@@ -979,9 +1184,11 @@ export const logoutFCM =
         '======================================',
       );
 
+
       console.log(
         'FCM LOGOUT START',
       );
+
 
       console.log(
         '======================================',
@@ -1003,9 +1210,11 @@ export const logoutFCM =
         '======================================',
       );
 
+
       console.log(
         '✅ FCM LOGOUT COMPLETE',
       );
+
 
       console.log(
         '======================================',
@@ -1015,7 +1224,8 @@ export const logoutFCM =
 
       console.log(
         '❌ FCM logout error:',
-        error?.message || error,
+        error?.message ||
+          error,
       );
     }
   };

@@ -18,25 +18,82 @@ class MainActivity : ReactActivity() {
             fabricEnabled
         )
 
+    // =====================================================
+    // ACTIVITY CREATED
+    // =====================================================
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        android.util.Log.d(
+            "MainActivity",
+            "=========================================="
+        )
+
+        android.util.Log.d(
+            "MainActivity",
+            "MainActivity onCreate()"
+        )
+
+        android.util.Log.d(
+            "MainActivity",
+            "=========================================="
+        )
 
         handleNotificationIntent(intent)
     }
 
-    override fun onNewIntent(intent: Intent?) {
+
+    // =====================================================
+    // NEW INTENT
+    // =====================================================
+
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+
+        android.util.Log.d(
+            "MainActivity",
+            "=========================================="
+        )
+
+        android.util.Log.d(
+            "MainActivity",
+            "MainActivity onNewIntent()"
+        )
+
+        android.util.Log.d(
+            "MainActivity",
+            "=========================================="
+        )
 
         setIntent(intent)
 
         handleNotificationIntent(intent)
     }
 
-    private fun handleNotificationIntent(intent: Intent?) {
+
+    // =====================================================
+    // HANDLE NOTIFICATION INTENT
+    // =====================================================
+
+    private fun handleNotificationIntent(
+        intent: Intent?
+    ) {
 
         if (intent == null) {
+
+            android.util.Log.d(
+                "MainActivity",
+                "⚠️ Intent is null"
+            )
+
             return
         }
+
+
+        // =================================================
+        // GET EXTRAS
+        // =================================================
 
         val ticketId =
             intent.getStringExtra("ticketId")
@@ -52,6 +109,11 @@ class MainActivity : ReactActivity() {
                 "fromNotification",
                 false
             )
+
+
+        // =================================================
+        // LOG RECEIVED DATA
+        // =================================================
 
         android.util.Log.d(
             "MainActivity",
@@ -87,5 +149,110 @@ class MainActivity : ReactActivity() {
             "MainActivity",
             "=========================================="
         )
+
+
+        // =================================================
+        // CHECK NOTIFICATION
+        // =================================================
+
+        if (!fromNotification) {
+
+            android.util.Log.d(
+                "MainActivity",
+                "ℹ️ Normal app launch - no notification"
+            )
+
+            return
+        }
+
+
+        // =================================================
+        // CHECK TICKET ID
+        // =================================================
+
+        if (ticketId.isNullOrBlank()) {
+
+            android.util.Log.e(
+                "MainActivity",
+                "❌ Notification ticketId is EMPTY"
+            )
+
+            return
+        }
+
+
+        // =================================================
+        // SAVE PENDING NOTIFICATION
+        // =================================================
+
+        android.util.Log.d(
+            "MainActivity",
+            "------------------------------------------"
+        )
+
+        android.util.Log.d(
+            "MainActivity",
+            "🚀 About to save pending notification"
+        )
+
+        android.util.Log.d(
+            "MainActivity",
+            "ticketId = $ticketId"
+        )
+
+        android.util.Log.d(
+            "MainActivity",
+            "ticketSubject = $ticketSubject"
+        )
+
+        android.util.Log.d(
+            "MainActivity",
+            "threadId = $threadId"
+        )
+
+        android.util.Log.d(
+            "MainActivity",
+            "------------------------------------------"
+        )
+
+
+        try {
+
+            NotificationBadgeModule.savePendingNotification(
+                ticketId = ticketId,
+                ticketSubject = ticketSubject,
+                threadId = threadId,
+                fromNotification = true
+            )
+
+
+            android.util.Log.d(
+                "MainActivity",
+                "=========================================="
+            )
+
+            android.util.Log.d(
+                "MainActivity",
+                "✅ Pending notification SAVE CALL completed"
+            )
+
+            android.util.Log.d(
+                "MainActivity",
+                "Saved ticketId = $ticketId"
+            )
+
+            android.util.Log.d(
+                "MainActivity",
+                "=========================================="
+            )
+
+        } catch (error: Exception) {
+
+            android.util.Log.e(
+                "MainActivity",
+                "❌ ERROR saving pending notification",
+                error
+            )
+        }
     }
 }

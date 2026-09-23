@@ -2,24 +2,60 @@ package com.syilreact.dealer
 
 import android.app.NotificationManager
 import android.content.Context
+
 import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.WritableMap
+
+import com.facebook.react.modules.core.DeviceEventManagerModule
+
+import java.lang.ref.WeakReference
+
 
 class NotificationBadgeModule(
     private val reactContext: ReactApplicationContext
 ) : ReactContextBaseJavaModule(reactContext) {
 
-    companion object {
-        private const val TAG = "NotificationBadge"
-        private const val TICKET_PREFIX = "FCM-Ticket:"
+    // =====================================================
+    // REACT NATIVE CONTEXT
+    // =====================================================
 
-        // -----------------------------------------------
+    init {
+
+        reactContextReference =
+            WeakReference(reactContext)
+
+        android.util.Log.d(
+            TAG,
+            "React Native context registered"
+        )
+    }
+
+
+    companion object {
+
+        private const val TAG =
+            "NotificationBadge"
+
+        private const val TICKET_PREFIX =
+            "FCM-Ticket:"
+
+
+        // =================================================
+        // React Native context reference
+        // =================================================
+
+        @Volatile
+        private var reactContextReference:
+            WeakReference<ReactApplicationContext>? = null
+
+
+        // =================================================
         // Pending notification data
-        // -----------------------------------------------
+        // =================================================
 
         @Volatile
         private var pendingTicketId: String? = null
@@ -33,6 +69,11 @@ class NotificationBadgeModule(
         @Volatile
         private var pendingFromNotification: Boolean = false
 
+
+        // =================================================
+        // SAVE PENDING NOTIFICATION
+        // =================================================
+
         fun savePendingNotification(
             ticketId: String?,
             ticketSubject: String?,
@@ -40,14 +81,41 @@ class NotificationBadgeModule(
             fromNotification: Boolean
         ) {
 
+            // ---------------------------------------------
+            // Validate ticket ID
+            // ---------------------------------------------
+
             if (ticketId.isNullOrBlank()) {
+
+                android.util.Log.e(
+                    TAG,
+                    "Cannot save pending notification: ticketId is empty"
+                )
+
                 return
             }
 
-            pendingTicketId = ticketId
-            pendingTicketSubject = ticketSubject ?: ""
-            pendingThreadId = threadId ?: ""
-            pendingFromNotification = fromNotification
+
+            // ---------------------------------------------
+            // Save pending notification
+            // ---------------------------------------------
+
+            pendingTicketId =
+                ticketId
+
+            pendingTicketSubject =
+                ticketSubject ?: ""
+
+            pendingThreadId =
+                threadId ?: ""
+
+            pendingFromNotification =
+                fromNotification
+
+
+            // ---------------------------------------------
+            // Log saved notification
+            // ---------------------------------------------
 
             android.util.Log.d(
                 TAG,
@@ -57,14 +125,131 @@ class NotificationBadgeModule(
                         "threadId=$pendingThreadId, " +
                         "fromNotification=$pendingFromNotification"
             )
+
+
+            // =================================================
+            // SEND DIRECT EVENT TO REACT NATIVE
+            // =================================================
+
+            try {
+
+                val context =
+                    reactContextReference?.get()
+
+
+                // ---------------------------------------------
+                // React context not available
+                // ---------------------------------------------
+
+                if (context == null) {
+
+                    android.util.Log.d(
+                        TAG,
+                        "⚠️ React Native context not available. " +
+                                "Pending notification will be handled later."
+                    )
+
+                    return
+                }
+
+
+                // ---------------------------------------------
+                // React Native instance not active
+                // ---------------------------------------------
+
+                if (!context.hasActiveCatalystInstance()) {
+
+                    android.util.Log.d(
+                        TAG,
+                        "⚠️ React Native Catalyst instance not active. " +
+                                "Pending notification will be handled later."
+                    )
+
+                    return
+                }
+
+
+                // ---------------------------------------------
+                // Create event data
+                // ---------------------------------------------
+
+                val params =
+                    Arguments.createMap()
+
+
+                params.putString(
+                    "ticketId",
+                    ticketId
+                )
+
+
+                params.putString(
+                    "ticketSubject",
+                    ticketSubject ?: ""
+                )
+
+
+                params.putString(
+                    "threadId",
+                    threadId ?: ""
+                )
+
+
+                params.putBoolean(
+                    "fromNotification",
+                    fromNotification
+                )
+
+
+                // ---------------------------------------------
+                // Send event
+                // ---------------------------------------------
+
+                context
+                    .getJSModule(
+                        DeviceEventManagerModule
+                            .RCTDeviceEventEmitter::class.java
+                    )
+                    .emit(
+                        "notificationClicked",
+                        params
+                    )
+
+
+                android.util.Log.d(
+                    TAG,
+                    "✅ notificationClicked event sent to React Native"
+                )
+
+            } catch (error: Exception) {
+
+                android.util.Log.e(
+                    TAG,
+                    "❌ Failed to send notificationClicked event",
+                    error
+                )
+            }
         }
+
+
+        // =================================================
+        // CLEAR PENDING NOTIFICATION
+        // =================================================
 
         fun clearPendingNotification() {
 
-            pendingTicketId = null
-            pendingTicketSubject = null
-            pendingThreadId = null
-            pendingFromNotification = false
+            pendingTicketId =
+                null
+
+            pendingTicketSubject =
+                null
+
+            pendingThreadId =
+                null
+
+            pendingFromNotification =
+                false
+
 
             android.util.Log.d(
                 TAG,
@@ -73,9 +258,16 @@ class NotificationBadgeModule(
         }
     }
 
+
+    // =====================================================
+    // MODULE NAME
+    // =====================================================
+
     override fun getName(): String {
+
         return "NotificationBadge"
     }
+
 
     // =====================================================
     // PENDING NOTIFICATION
@@ -88,6 +280,7 @@ class NotificationBadgeModule(
      * JS startup hone ke baad getPendingNotification()
      * se ye data retrieve hoga.
      */
+
     @ReactMethod
     fun getPendingNotification(
         promise: Promise
@@ -95,7 +288,9 @@ class NotificationBadgeModule(
 
         try {
 
-            val ticketId = pendingTicketId
+            val ticketId =
+                pendingTicketId
+
 
             // -------------------------------------------
             // No pending notification
@@ -113,6 +308,7 @@ class NotificationBadgeModule(
                 return
             }
 
+
             // -------------------------------------------
             // Create JS object
             // -------------------------------------------
@@ -120,30 +316,36 @@ class NotificationBadgeModule(
             val result: WritableMap =
                 Arguments.createMap()
 
+
             result.putString(
                 "ticketId",
                 ticketId
             )
+
 
             result.putString(
                 "ticketSubject",
                 pendingTicketSubject ?: ""
             )
 
+
             result.putString(
                 "threadId",
                 pendingThreadId ?: ""
             )
+
 
             result.putBoolean(
                 "fromNotification",
                 pendingFromNotification
             )
 
+
             android.util.Log.d(
                 TAG,
                 "Returning pending notification: $result"
             )
+
 
             // -------------------------------------------
             // Clear after reading
@@ -151,7 +353,10 @@ class NotificationBadgeModule(
 
             clearPendingNotification()
 
-            promise.resolve(result)
+
+            promise.resolve(
+                result
+            )
 
         } catch (error: Exception) {
 
@@ -161,6 +366,7 @@ class NotificationBadgeModule(
                 error
             )
 
+
             promise.reject(
                 "PENDING_NOTIFICATION_ERROR",
                 error.message,
@@ -168,6 +374,7 @@ class NotificationBadgeModule(
             )
         }
     }
+
 
     // =====================================================
     // CANCEL TICKET NOTIFICATIONS
@@ -180,32 +387,44 @@ class NotificationBadgeModule(
      * Android launcher badge will then be recalculated from the
      * remaining active notifications.
      */
+
     @ReactMethod
-    fun cancelTicketNotifications(ticketId: String) {
+    fun cancelTicketNotifications(
+        ticketId: String
+    ) {
 
         val notificationManager =
             reactContext.getSystemService(
                 Context.NOTIFICATION_SERVICE
             ) as NotificationManager
 
+
         if (
             android.os.Build.VERSION.SDK_INT <
             android.os.Build.VERSION_CODES.M
         ) {
+
             return
         }
+
 
         val activeNotifications =
             notificationManager.activeNotifications
 
+
         val ticketPrefix =
             "$TICKET_PREFIX$ticketId:"
 
-        var cancelledCount = 0
+
+        var cancelledCount =
+            0
+
 
         activeNotifications.forEach { notification ->
 
-            val tag = notification.tag
+            val tag =
+                notification.tag
+
 
             if (
                 tag != null &&
@@ -217,7 +436,9 @@ class NotificationBadgeModule(
                     notification.id
                 )
 
+
                 cancelledCount++
+
 
                 android.util.Log.d(
                     TAG,
@@ -226,10 +447,12 @@ class NotificationBadgeModule(
             }
         }
 
+
         android.util.Log.d(
             TAG,
             "Ticket $ticketId notifications cancelled: $cancelledCount"
         )
+
 
         android.util.Log.d(
             TAG,
@@ -237,6 +460,7 @@ class NotificationBadgeModule(
                     notificationManager.activeNotifications.size
         )
     }
+
 
     // =====================================================
     // BADGE SYNCHRONIZATION
@@ -249,21 +473,27 @@ class NotificationBadgeModule(
      * here because setNumber() on individual notifications can make
      * launcher badges aggregate incorrectly.
      */
+
     @ReactMethod
-    fun setBadge(count: Int) {
+    fun setBadge(
+        count: Int
+    ) {
 
         val safeCount =
             if (count < 0) 0 else count
+
 
         val notificationManager =
             reactContext.getSystemService(
                 Context.NOTIFICATION_SERVICE
             ) as NotificationManager
 
+
         android.util.Log.d(
             TAG,
             "Badge synchronization requested: $safeCount"
         )
+
 
         if (
             android.os.Build.VERSION.SDK_INT >=
@@ -273,12 +503,14 @@ class NotificationBadgeModule(
             val activeCount =
                 notificationManager.activeNotifications.size
 
+
             android.util.Log.d(
                 TAG,
                 "Current active notification count: $activeCount"
             )
         }
     }
+
 
     // =====================================================
     // CLEAR BADGE
@@ -289,6 +521,7 @@ class NotificationBadgeModule(
      *
      * Used when total unread count becomes zero.
      */
+
     @ReactMethod
     fun clearBadge() {
 
@@ -296,6 +529,7 @@ class NotificationBadgeModule(
             reactContext.getSystemService(
                 Context.NOTIFICATION_SERVICE
             ) as NotificationManager
+
 
         if (
             android.os.Build.VERSION.SDK_INT >=
@@ -305,11 +539,16 @@ class NotificationBadgeModule(
             val activeNotifications =
                 notificationManager.activeNotifications
 
-            var cancelledCount = 0
+
+            var cancelledCount =
+                0
+
 
             activeNotifications.forEach { notification ->
 
-                val tag = notification.tag
+                val tag =
+                    notification.tag
+
 
                 if (
                     tag != null &&
@@ -321,7 +560,9 @@ class NotificationBadgeModule(
                         notification.id
                     )
 
+
                     cancelledCount++
+
 
                     android.util.Log.d(
                         TAG,
@@ -329,6 +570,7 @@ class NotificationBadgeModule(
                     )
                 }
             }
+
 
             android.util.Log.d(
                 TAG,

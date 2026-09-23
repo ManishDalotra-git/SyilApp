@@ -22,12 +22,16 @@ import UploadArticles from './src/screens/UploadArticles';
 import OwnerTickets from './src/screens/OwnerTickets';
 import Chatscreen from './src/screens/Chatscreen';
 
+import CustomerNewsListing from './src/screens/CustomerNewsListing';
+import CustomerNewsDetail from './src/screens/CustomerNewsDetail';
+import WebViewScreen from './src/screens/WebViewScreen';
+
 import {
   NavigationContainer,
 } from '@react-navigation/native';
 
 
-import {navigationRef,openPendingTicket,} from './src/navigation/navigationRef';
+import {navigationRef} from './src/navigation/navigationRef';
 import {setupNotificationOpenHandlers,} from './src/utils/fcm';
 
 
@@ -83,16 +87,15 @@ const App = () => {
 
 
   return (
-     <NavigationContainer ref={navigationRef} 
+    <NavigationContainer ref={navigationRef} 
       onReady={() => {
           console.log('==========================================');
           console.log('NAVIGATION CONTAINER READY');
           console.log('==========================================');
-          openPendingTicket();
-
+          //openPendingTicket();
         }}
-      >
-      <Stack.Navigator>
+    >
+    <Stack.Navigator>
         <Stack.Screen name="Loading" component={Loading} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={Home} options={{ headerShown: false }} />
         <Stack.Screen name="Profile" component={Profile} options={{ headerShown: false }}  />
@@ -110,6 +113,10 @@ const App = () => {
         <Stack.Screen name="UploadArticles" component={UploadArticles} options={{ headerShown: false }} />
         <Stack.Screen name="OwnerTickets" component={OwnerTickets} options={{ headerShown: false }} />
         <Stack.Screen name="Chatscreen" component={Chatscreen} options={{ headerShown: false }} />
+
+        <Stack.Screen name="CustomerNewsListing" component={CustomerNewsListing} options={{ headerShown: false }} />
+        <Stack.Screen name="CustomerNewsDetail" component={CustomerNewsDetail} options={{ headerShown: false }} />
+        <Stack.Screen name="WebViewScreen" component={WebViewScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   )

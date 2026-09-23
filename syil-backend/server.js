@@ -4328,6 +4328,35 @@ app.post('/send-hubspot-message', async (req, res) => {
  
 
 
+
+app.get('/customer-news', async (req, res) => {  
+  try {
+    const response = await fetch(
+      'https://api.hubapi.com/cms/v3/blogs/posts?contentGroupId__eq=218892120384',
+      {
+        method: 'GET',
+        headers: { 
+          Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    res.json(data);
+  } catch (error) {
+    console.log('Customer News Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Something went wrong',
+    });
+  }
+});
+
+
+
+
 app.listen(PORT,'0.0.0.0', () => console.log(`Server running on http://localhost:${PORT}`));
 
 
