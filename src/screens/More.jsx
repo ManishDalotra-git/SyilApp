@@ -224,7 +224,7 @@ const More = ({ navigation }) => {
                 <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
             </TouchableOpacity>  */}
 
-            {email?.toLowerCase() === 'manish.dalotra@techstriker.com' && (
+            {['manish.dalotra@techstriker.com', 'fabuikema@gmail.com'].includes(email?.toLowerCase()) && (
             <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('Announcements')} >
                 <View style={styles.left}>
                 <Image source={require('../../images/ArticleIcon.png')} style={styles.icon} />

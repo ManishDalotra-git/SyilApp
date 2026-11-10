@@ -200,7 +200,7 @@ app.post('/announcements', async (req, res) => {
       media = [],
     } = req.body;
 
-    const ADMIN_EMAIL = 'manish.dalotra@techstriker.com';
+    const ADMIN_EMAIL = ['manish.dalotra@techstriker.com','fabuikema@gmail.com',];
 
     // Temporary admin authorization for testing.
     if (
@@ -412,7 +412,7 @@ app.post('/announcements/:id/like', async (req, res) => {
 
 
 
-const ANNOUNCEMENT_ADMIN_EMAIL = 'manish.dalotra@techstriker.com';
+const ANNOUNCEMENT_ADMIN_EMAIL = ['manish.dalotra@techstriker.com','fabuikema@gmail.com',];
 
 // Edit an announcement — admin only
 app.put('/announcements/:id', async (req, res) => {
@@ -420,13 +420,14 @@ app.put('/announcements/:id', async (req, res) => {
   const { userEmail, title, description } = req.body;
 
   if (
-    userEmail?.trim().toLowerCase() !== ANNOUNCEMENT_ADMIN_EMAIL
-  ) {
-    return res.status(403).json({
-      success: false,
-      message: 'Only admin can edit announcements',
-    });
-  }
+  typeof userEmail !== 'string' ||
+  !ANNOUNCEMENT_ADMIN_EMAIL.includes(userEmail.trim().toLowerCase())
+) {
+  return res.status(403).json({
+    success: false,
+    message: 'Only admin can create announcements',
+  });
+}
 
   if (!title?.trim() || !description?.trim()) {
     return res.status(400).json({
