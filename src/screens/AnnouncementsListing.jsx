@@ -26,7 +26,7 @@ import RNFS from 'react-native-fs';
 import {CameraRoll} from '@react-native-camera-roll/camera-roll';
 
 const API_BASE_URL = 'https://syilapp-w8ye.onrender.com';
-const ADMIN_EMAILS = ['manish.dalotra@techstriker.com','fabuikema@gmail.com',];
+const ADMIN_EMAIL = 'fabuikema@gmail.com';
 
 const AnnouncementsListing = ({navigation}) => {
   const [announcements, setAnnouncements] = useState([]);
@@ -50,7 +50,8 @@ const AnnouncementsListing = ({navigation}) => {
 
   const mediaWidth = Dimensions.get('window').width - 64;
 
-  const isAdmin = ADMIN_EMAILS.includes(userEmail.trim().toLowerCase());
+  const isAdmin =
+    userEmail.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   const loadAnnouncements = async (showLoader = true) => {
     if (showLoader) {

@@ -14,7 +14,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {launchImageLibrary} from 'react-native-image-picker';
 
-const ADMIN_EMAILS = ['manish.dalotra@techstriker.com','fabuikema@gmail.com',];
+const ADMIN_EMAIL = 'fabuikema@gmail.com';
 const API_BASE_URL = 'https://syilapp-w8ye.onrender.com';
 const MAX_FILES = 5;
 
@@ -41,9 +41,8 @@ const Announcements = ({navigation}) => {
     loadUser();
   }, []);
 
-  const isAdmin = ADMIN_EMAILS.includes(
-  userEmail.trim().toLowerCase()
-);
+  const isAdmin =
+    userEmail.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   const handlePickMedia = async () => {
     if (publishing) {
