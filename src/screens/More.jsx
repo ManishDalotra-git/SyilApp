@@ -38,6 +38,13 @@ const More = ({ navigation }) => {
     //     if (userFirstName) setFirstName(userFirstName);
     //     if (userLastName) setLastName(userLastName);
     //     console.log('userFirstName-- ', userFirstName);
+
+
+
+
+
+
+    
     //     console.log('userLastName-- ', userLastName);
     //     };
     //     userData();
@@ -72,7 +79,7 @@ const More = ({ navigation }) => {
 
             loadUserName();
         }, [])
-    );
+    );  
 
     const getInitials = (firstName = '', lastName = '') => {
         const f = firstName?.charAt(0)?.toUpperCase() || '';
@@ -87,36 +94,19 @@ const More = ({ navigation }) => {
             {/* HEADER */}
             <View style={styles.flexClass}>
                 <Pressable onPress={() => navigation.navigate('Profile')}>
-                    {/* <Image
-                    source={require('../../images/right_arrow.png')}
-                    style={styles.rightarrowIcon}
-                    /> */}
-    
-                    {/* <Image
-                        source={require('../../images/profile_icon.png')}
-                        style={styles.profileImage}
-                    /> */}
-                    <View style={styles.initialsAvatar}>
-                        <Text style={styles.initialsText}>
-                        {getInitials(firstName, lastName)}
+                    <View style={styles.initialsAvatar}> 
+                        <Text style={styles.initialsText}> 
+                            {getInitials(firstName, lastName)} 
                         </Text>
                     </View>
                 </Pressable>
-    
-                <Image
-                    source={require('../../images/syil_logo_black.png')}
-                    style={styles.logoSyil}
-                />
-    
+
+                <Image source={require('../../images/syil_logo_black.png')} style={styles.logoSyil} />
+
                 <Pressable onPress={() => navigation.navigate('Ticket')}>
-                    <Image
-                    source={require('../../images/ticket.png')}
-                    style={styles.ticketIcon}
-                    />
+                    <Image source={require('../../images/ticket.png')} style={styles.ticketIcon} />
                 </Pressable>
             </View>
-
-            
             
             {/* Ask Alex */}
             {email === 'manish.dalotra@techstriker.com' && (
@@ -129,7 +119,6 @@ const More = ({ navigation }) => {
             </TouchableOpacity>
             )}
 
-            
             {/* Ask Alex */}
             {/* <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('AskAlex')} >
                 <View style={styles.left}>
@@ -142,7 +131,7 @@ const More = ({ navigation }) => {
             <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('Chatscreen')} >
                 <View style={styles.left}>
                 <Image source={require('../../images/ask.png')} style={styles.icon} />
-                <Text style={styles.text}>Ask Alex</Text>
+                <Text style={styles.text}>Chat with SYIL</Text>
                 </View>
                 <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
             </TouchableOpacity>
@@ -157,7 +146,7 @@ const More = ({ navigation }) => {
             </TouchableOpacity>
 
             {/* Request Quote */}
-            <TouchableOpacity style={styles.row} 
+            {/* <TouchableOpacity style={styles.row} 
                     onPress={() => {
                     const url = 'https://syil.com/contact-us';
                     Linking.canOpenURL(url)
@@ -175,10 +164,10 @@ const More = ({ navigation }) => {
                 <Text style={styles.text}>Request Quote</Text>
                 </View>
                 <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             {/* Customer Stories */}
-            <TouchableOpacity style={styles.row} onPress={() => {
+            {/* <TouchableOpacity style={styles.row} onPress={() => {
                     const url = 'https://syil.com/customer-stories-form';
                     Linking.canOpenURL(url)
                     .then(supported => {
@@ -195,7 +184,63 @@ const More = ({ navigation }) => {
                 <Text style={styles.text}>Customer Stories</Text>
                 </View>
                 <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
+            </TouchableOpacity> */}
+
+            <TouchableOpacity style={styles.row} 
+            // onPress={() => {
+            //         const url = 'https://syil.com/customer-stories-form';
+            //         Linking.canOpenURL(url)
+            //         .then(supported => {
+            //             if (supported) {
+            //             Linking.openURL(url);
+            //             } else {
+            //             console.log("Don't know how to open URI: " + url);
+            //             }
+            //         })
+            //         .catch(err => console.error('An error occurred', err));
+            //     }}
+
+            onPress={() => navigation.navigate('WebViewScreen', { url: 'https://syil.com/case-studies', }) }>
+                <View style={styles.left}>
+                <Image source={require('../../images/customer.png')} style={styles.icon} />
+                <Text allowFontScaling={false} style={styles.text}>Customer Stories</Text>
+                </View>
+                <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
             </TouchableOpacity>
+
+            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('CustomerNewsListing')} >
+                <View style={styles.left}>
+                <Image source={require('../../images/customer_listing_blog.png')} style={styles.icon} />
+                <Text allowFontScaling={false} style={styles.text}>Dealer News</Text>
+                </View>
+                <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
+            </TouchableOpacity>
+
+            {/* <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('Announcements')} >
+                <View style={styles.left}>
+                    <Image source={require('../../images/customer_listing_blog.png')} style={styles.icon} />
+                    <Text allowFontScaling={false} style={styles.text}>Announcements</Text>
+                </View>
+                <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
+            </TouchableOpacity>  */}
+
+            {email?.toLowerCase() === 'manish.dalotra@techstriker.com' && (
+            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('Announcements')} >
+                <View style={styles.left}>
+                <Image source={require('../../images/ArticleIcon.png')} style={styles.icon} />
+                <Text style={styles.text}>Manage Announcements</Text>
+                </View>
+                <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
+            </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('AnnouncementsListing')} >
+                <View style={styles.left}>
+                    <Image source={require('../../images/customer_listing_blog.png')} style={styles.icon} />
+                    <Text allowFontScaling={false} style={styles.text}>Announcements Listing</Text>
+                </View>
+                <Image source={require('../../images/left_arrow.png')} style={styles.Leftarrow} />
+            </TouchableOpacity>  
 
         </View>
     </View>

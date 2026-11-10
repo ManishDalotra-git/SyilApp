@@ -45,7 +45,7 @@ useEffect(() => {
         duration: 1000,
         useNativeDriver: true,
     }).start();
-    Animated.timing(progress, {
+    Animated.timing(progress, { 
         toValue: width - 60,
         duration: 3500,
         useNativeDriver: false,
@@ -67,7 +67,7 @@ const checkLoginStatus = async () => {
       navigation.replace('Login');
       return;
     }
-
+ 
     const now = Date.now();
     const diffInDays =
       (now - Number(lastLoginTime)) / 1000 / 60 / 60 / 24;

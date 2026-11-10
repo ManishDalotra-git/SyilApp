@@ -113,6 +113,7 @@ const CustomerNewsListing = ({ navigation }) => {
     });
   };
 
+
   const renderItem = ({ item }) => {
     return (
       <TouchableOpacity
@@ -155,59 +156,57 @@ const CustomerNewsListing = ({ navigation }) => {
 
         <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Image
-                source={require('../../images/circle_arrow.png')}
-                style={styles.arrowIcon}
-            />
+              <Image
+                  source={require('../../images/circle_arrow.png')}
+                  style={styles.arrowIcon}
+              />
             </TouchableOpacity>
             <Text allowFontScaling={false} style={styles.headerTitle}>Dealer News Listing</Text>
         </View>
+
         <View style={styles.containerInner}>
 
-    <View style={styles.searchBox}>
-      <Image  
-            source={require('../../images/search_icon.png')}
-            style={styles.searchIcon}
-          />
-        <TextInput
-          placeholder="Search Blog"
-          value={search}
-          onChangeText={handleSearch}
-          style={styles.searchInput}
-          placeholderTextColor="#999"
-        />
+          <View style={styles.searchBox}>
+            <Image  
+              source={require('../../images/search_icon.png')}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              placeholder="Search Blog"
+              value={search}
+              onChangeText={handleSearch}
+              style={styles.searchInput}
+              placeholderTextColor="#999"
+            />
+          </View>
+
+
+          {loading ? (
+            <ActivityIndicator
+              size="large"
+              color="#000"
+            />
+          ) : (
+            <FlatList
+              //data={filteredNews}
+              data={filteredNews.filter(item => item.currentState === 'PUBLISHED')}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={2}
+              showsVerticalScrollIndicator={false}
+              columnWrapperStyle={{
+                justifyContent: 'space-between',
+              }} 
+              contentContainerStyle={{
+                paddingBottom: 100,
+              }}
+              ListFooterComponent={<View style={{ height: 130 }} />}
+            />
+          )}
       </View>
       
-
-      {loading ? (
-        <ActivityIndicator
-          size="large"
-          color="#000"
-        />
-      ) : (
-        <FlatList
-          //data={filteredNews}
-          data={filteredNews.filter(item => item.currentState === 'PUBLISHED')}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          showsVerticalScrollIndicator={false}
-          columnWrapperStyle={{
-            justifyContent: 'space-between',
-          }} 
-          contentContainerStyle={{
-            paddingBottom: 100,
-          }}
-          ListFooterComponent={<View style={{ height: 130 }} />}
-        />
-      )}
-      </View>
-
-      
-
     </View>
 
-    
     </KeyboardAvoidingView>
       <Footer appSupportTeamMember={appSupportTeamMember} currentRoute={currentRoute} />
     </View>

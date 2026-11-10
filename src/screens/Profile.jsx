@@ -218,7 +218,6 @@ const Profile = ({ navigation }) => {
 
     ]);
 
-
     setContactId(null);
 
 
@@ -245,21 +244,20 @@ const Profile = ({ navigation }) => {
       error,
     );
 
-    navigation.reset({
+          navigation.reset({
 
-      index: 0,
+            index: 0,
 
-      routes: [
-        {
-          name: 'Login',
-        },
-      ],
+            routes: [
+              {
+                name: 'Login',
+              },
+            ],
 
-    });
+          });
 
-  }
-
-}
+          }
+        }
       },
     ]
   );

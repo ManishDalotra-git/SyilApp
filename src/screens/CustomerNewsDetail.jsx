@@ -21,6 +21,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Footer from './components/Footer';
 
 import RenderHtml from 'react-native-render-html';
+import Video from 'react-native-video';
 
 const CustomerNewsDetail = ({ route, navigation }) => {
 
@@ -32,7 +33,10 @@ const CustomerNewsDetail = ({ route, navigation }) => {
   const { id } = route.params;
 
   const [newsDetail, setNewsDetail] = useState(null);
+  const [videoUrls, setVideoUrls] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const [pricingButton, setPricingButton] = useState(null);
 
   const { width } = useWindowDimensions();
 
@@ -40,7 +44,7 @@ const CustomerNewsDetail = ({ route, navigation }) => {
 
   useEffect(() => {
     fetchDetail();
-  }, []);
+  }, []); 
 
   
     useFocusEffect(
@@ -72,15 +76,37 @@ const CustomerNewsDetail = ({ route, navigation }) => {
       setLoading(true);
 
       const response = await fetch(
-        'https://syilfordealeriosapp.onrender.com/customer-news'
+        'https://syilapp-w8ye.onrender.com/customer-news'
       );
 
       const data = await response.json();
 
       const matchedNews = data.results.find(
-        (item) => item.id === id
+        (item) => String(item.id) === String(id)
       );
 
+      if (matchedNews) {
+        const buttonWidget = Object.values(matchedNews.widgets || {}).find(
+          (widget) =>
+            widget.label === 'button' &&
+            widget.body?.button_text?.trim()
+        );
+        setPricingButton(buttonWidget?.body || null);
+      }
+
+      const postBody = matchedNews.postBody || '';
+
+      const videoUrls = Array.from(
+        postBody.matchAll(
+          /{% module_attribute "video_file" is_json="true" %}{% raw %}"(https?:\/\/[^"]+\.mp4)"{% endraw %}{% end_module_attribute %}/g
+        ),
+        match => match[1]
+      );
+
+      console.log('Video URLs:', videoUrls);
+
+      setVideoUrls(videoUrls);
+      
       setNewsDetail(matchedNews);
 
     } catch (error) {
@@ -187,7 +213,10 @@ const CustomerNewsDetail = ({ route, navigation }) => {
 
 const cleanedPostBody = (
   newsDetail.postBody || ''
-).replace(/\{\{[\s\S]*?\}\}/g, '');
+).replace(
+    /{% module_block[\s\S]*?{% end_module_block %}/g,
+    ''
+  ).replace(/\{\{[\s\S]*?\}\}/g, '');
 
   return (
     <View style={styles.background}>
@@ -270,30 +299,80 @@ const cleanedPostBody = (
           }}
         />
 
-        {/* BUTTON */}
 
-        {newsDetail.widgets
-          ?.module_17447901888127
-          ?.body?.link?.url?.href && (
+        {/* VIDEOS */}
 
-          <TouchableOpacity
-  style={styles.button}
-  onPress={() => {
-    const path =
-      newsDetail.widgets
-        ?.module_17447901888127
-        ?.body?.link?.url?.href;
+        {videoUrls.map((url, index) => (
+          <Video
+            key={`${url}-${index}`}
+            source={{ uri: url }}
+            style={{
+              width: '100%',
+              height: 240,
+              marginVertical: 12,
+              backgroundColor: '#000',
+            }}
+            controls={true}
+            resizeMode="contain"
+            paused={true}
+            onError={(error) => {
+              console.log(
+                `Video ${index + 1} playback error:`,
+                error
+              );
+            }}
+          />
+        ))}
 
-    const fullUrl = `https://us.syil.com${path}`;
 
-    Linking.openURL(fullUrl);
-  }}
->
-  <Text allowFontScaling={false} style={styles.buttonText}>
-    Get Pricing
-  </Text>
-</TouchableOpacity>
-        )}
+
+        
+{/* DYNAMIC BUTTON */}
+{pricingButton?.button_text?.trim() ? (
+  <TouchableOpacity
+    style={styles.button}
+    onPress={() => {
+      const buttonUrl = pricingButton?.link?.url?.href?.trim();
+      const newsUrl = newsDetail?.url;
+
+      if (!buttonUrl) {
+        console.log('Button URL missing:', pricingButton?.link);
+        return;
+      }
+
+      let fullUrl;
+
+      // If the button URL already contains a domain, use it directly.
+      if (/^https?:\/\//i.test(buttonUrl)) {
+        fullUrl = buttonUrl;
+      } else {
+        // Otherwise, get the domain dynamically from the news URL.
+        try {
+          const domain = new URL(newsUrl).origin;
+          const path = buttonUrl.startsWith('/')
+            ? buttonUrl
+            : `/${buttonUrl}`;
+
+          fullUrl = `${domain}${path}`;
+        } catch (error) {
+          console.log('Unable to get domain from news URL:', newsUrl);
+          return;
+        }
+      }
+
+      console.log('Opening WebView URL:', fullUrl);
+
+      navigation.navigate('WebViewScreen', {
+        url: fullUrl,
+      });
+    }}
+  >
+    <Text style={styles.pricingButtonText}>
+      {pricingButton.button_text}
+    </Text>
+  </TouchableOpacity>
+) : null}
+
 
       </ScrollView>
 
@@ -378,7 +457,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  buttonText: {
+  pricingButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

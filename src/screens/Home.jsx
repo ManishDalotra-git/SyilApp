@@ -245,7 +245,7 @@ useFocusEffect(
           </View>
 
           <View style={styles.fourCardsRowContent}>
-            <Text style={styles.fourCardsRowTitle}>Chat With Alex</Text>
+            <Text style={styles.fourCardsRowTitle}>Chat With SYIL</Text>
           </View>
         </Pressable>
       </View>
@@ -259,10 +259,10 @@ useFocusEffect(
 
         <Pressable 
         onPress={() =>
-                        navigation.navigate('WebViewScreen', {
-                        url: 'https://syil.com/case-studies',
-                        })
-                    }
+            navigation.navigate('WebViewScreen', {
+            url: 'https://syil.com/case-studies',
+            })
+        }
          style={styles.bottomButton}>
           <View style={styles.bottomButtonCardFlex} >
             <Text allowFontScaling={false} style={styles.bottomButtonCardTitle}>Customer Stories</Text>

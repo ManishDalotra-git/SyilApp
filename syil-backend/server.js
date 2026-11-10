@@ -31,6 +31,10 @@ console.log('Firebase Admin initialized');
 const express = require('express');
 const bodyParser = require('body-parser');
 
+// ANNOUNCEMENTS START
+const { Pool } = require('pg');
+// ANNOUNCEMENTS END
+
 const path = require('path');
 
 const app = express();
@@ -38,20 +42,586 @@ const PORT = 3000;
 
 app.use(bodyParser.json());
 
+
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 
-const multer = require('multer');
+
 const { send } = require('process');
+const multer = require('multer');
 const hubspotUpload = multer({
   dest: 'uploads/'
 });
 
 const HUBSPOT_API_KEY = process.env.HUBSPOT_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const firebaseService = JSON.parse(process.env.FIREBASE_ADMIN_SDK,);
 console.log('api--- ', HUBSPOT_API_KEY);
 console.log('OPENAI_API_KEY--- ', OPENAI_API_KEY);
+console.log('FIREBASE_ADMIN_SDK--- ', firebaseService);
+
+
+
+
+
+// ANNOUNCEMENTS START
+
+
+// ============================================================
+// POSTGRESQL DATABASE CONNECTION - ANNOUNCEMENTS
+// ============================================================
+
+const announcementDb = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL
+    ? { rejectUnauthorized: false }
+    : false,
+});
+
+announcementDb.on('connect', () => {
+  console.log('PostgreSQL connection established');
+});
+
+announcementDb.on('error', (error) => {
+  console.error('PostgreSQL pool error:', error.message);
+});
+
+
+app.get('/test-announcements-db', async (req, res) => {
+  try {
+    const result = await announcementDb.query('SELECT NOW() AS current_time');
+
+    res.json({
+      success: true,
+      message: 'Announcements database connected successfully',
+      databaseTime: result.rows[0].current_time,
+    });
+  } catch (error) {
+    console.error('Announcements DB test failed:', error.message);
+
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
+    });
+  }
+});
+
+
+// GET all published announcements
+
+
+app.get('/announcements', async (req, res) => {
+  const userEmail =
+    typeof req.query.userEmail === 'string'
+      ? req.query.userEmail.trim().toLowerCase()
+      : '';
+
+  try {
+    const result = await announcementDb.query(
+      `
+      SELECT
+        a.id,
+        a.title,
+        a.description,
+        a.created_by_email,
+        a.created_by_name,
+        a.created_at,
+        a.updated_at,
+
+        COUNT(DISTINCT l.id)::INTEGER AS like_count,
+
+        EXISTS (
+          SELECT 1
+          FROM announcement_likes ul
+          WHERE ul.announcement_id = a.id
+            AND LOWER(ul.user_email) = $1
+        ) AS liked_by_me,
+
+        COALESCE(
+          (
+            SELECT JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'url', am.media_url,
+                'media_type', am.media_type
+              )
+              ORDER BY am.id
+            )
+            FROM announcement_media am
+            WHERE am.announcement_id = a.id
+          ),
+          '[]'::JSON
+        ) AS media
+
+      FROM announcements a
+
+      LEFT JOIN announcement_likes l
+        ON l.announcement_id = a.id
+
+      WHERE a.is_published = TRUE
+
+      GROUP BY a.id
+      ORDER BY a.created_at DESC
+      `,
+      [userEmail],
+    );
+
+    return res.json({
+      success: true,
+      announcements: result.rows,
+    });
+
+  } catch (error) {
+    console.error('Get announcements error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to load announcements',
+    });
+  }
+});
+
+
+
+
+
+// CREATE announcement (temporary testing authorization)
+
+app.post('/announcements', async (req, res) => {
+  const client = await announcementDb.connect();
+  let transactionStarted = false;
+
+  try {
+    const {
+      title,
+      description,
+      userEmail,
+      userName,
+      media = [],
+    } = req.body;
+
+    const ADMIN_EMAIL = 'manish.dalotra@techstriker.com';
+
+    // Temporary admin authorization for testing.
+    if (
+      typeof userEmail !== 'string' ||
+      userEmail.trim().toLowerCase() !== ADMIN_EMAIL
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admin can create announcements',
+      });
+    }
+
+    if (
+      typeof title !== 'string' ||
+      !title.trim() ||
+      typeof description !== 'string' ||
+      !description.trim()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title and description are required',
+      });
+    }
+
+    if (!Array.isArray(media) || media.length > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum 5 media files are allowed',
+      });
+    }
+
+    // Validate every media item before starting the transaction.
+    for (const item of media) {
+      if (
+        !item ||
+        typeof item.url !== 'string' ||
+        !item.url.trim() ||
+        !['image', 'video'].includes(item.media_type)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid media details provided',
+        });
+      }
+    }
+
+    await client.query('BEGIN');
+    transactionStarted = true;
+
+    // Create announcement.
+    const announcementResult = await client.query(
+      `
+      INSERT INTO announcements
+        (title, description, created_by_email, created_by_name)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+      `,
+      [
+        title.trim(),
+        description.trim(),
+        ADMIN_EMAIL,
+        typeof userName === 'string' ? userName.trim() : null,
+      ]
+    );
+
+    const announcement = announcementResult.rows[0];
+
+    // Save uploaded HubSpot media URLs.
+    const savedMedia = [];
+
+    for (const item of media) {
+      const mediaResult = await client.query(
+        `
+        INSERT INTO announcement_media
+          (announcement_id, media_url, media_type)
+        VALUES ($1, $2, $3)
+        RETURNING id, media_url, media_type
+        `,
+        [
+          announcement.id,
+          item.url.trim(),
+          item.media_type,
+        ]
+      );
+
+      savedMedia.push({
+        url: mediaResult.rows[0].media_url,
+        media_type: mediaResult.rows[0].media_type,
+      });
+    }
+
+    await client.query('COMMIT');
+    transactionStarted = false;
+
+    return res.status(201).json({
+      success: true,
+      message: 'Announcement created successfully',
+      announcement: {
+        ...announcement,
+        media: savedMedia,
+      },
+    });
+
+  } catch (error) {
+    if (transactionStarted) {
+      await client.query('ROLLBACK');
+    }
+
+    console.error('Create announcement failed:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to create announcement',
+    });
+
+  } finally {
+    client.release();
+  }
+});
+
+
+
+
+
+
+
+// Like / Unlike an announcement
+app.post('/announcements/:id/like', async (req, res) => {
+  const { id } = req.params;
+  const { userEmail, userName } = req.body;
+
+  const email = userEmail?.trim().toLowerCase();
+  const name = userName?.trim() || '';
+
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      message: 'User email is required',
+    });
+  }
+
+  const client = await announcementDb.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const announcement = await client.query(
+      'SELECT id FROM announcements WHERE id = $1 AND is_published = TRUE',
+      [id],
+    );
+
+    if (announcement.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Announcement not found',
+      });
+    }
+
+    const existingLike = await client.query(
+      `DELETE FROM announcement_likes
+       WHERE announcement_id = $1 AND LOWER(user_email) = $2
+       RETURNING id`,
+      [id, email],
+    );
+
+    let liked = false;
+
+    if (existingLike.rowCount === 0) {
+      await client.query(
+        `INSERT INTO announcement_likes
+          (announcement_id, user_email, user_name)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (announcement_id, user_email) DO NOTHING`,
+        [id, email, name],
+      );
+
+      liked = true;
+    }
+
+    const countResult = await client.query(
+      `SELECT COUNT(*)::INTEGER AS like_count
+       FROM announcement_likes
+       WHERE announcement_id = $1`,
+      [id],
+    );
+
+    await client.query('COMMIT');
+
+    return res.json({
+      success: true,
+      liked,
+      likeCount: countResult.rows[0].like_count,
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Announcement like error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update announcement like',
+    });
+  } finally {
+    client.release();
+  }
+});
+
+
+
+
+
+const ANNOUNCEMENT_ADMIN_EMAIL = 'manish.dalotra@techstriker.com';
+
+// Edit an announcement — admin only
+app.put('/announcements/:id', async (req, res) => {
+  const { id } = req.params;
+  const { userEmail, title, description } = req.body;
+
+  if (
+    userEmail?.trim().toLowerCase() !== ANNOUNCEMENT_ADMIN_EMAIL
+  ) {
+    return res.status(403).json({
+      success: false,
+      message: 'Only admin can edit announcements',
+    });
+  }
+
+  if (!title?.trim() || !description?.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Title and description are required',
+    });
+  }
+
+  try {
+    const result = await announcementDb.query(
+      `UPDATE announcements
+       SET title = $1,
+           description = $2,
+           updated_at = NOW()
+       WHERE id = $3
+       RETURNING id, title, description, updated_at`,
+      [title.trim(), description.trim(), id],
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Announcement not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Announcement updated successfully',
+      announcement: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Edit announcement error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update announcement',
+    });
+  }
+});
+
+// Delete an announcement — admin only
+app.delete('/announcements/:id', async (req, res) => {
+  const { id } = req.params;
+  const { userEmail } = req.body;
+
+  if (
+    userEmail?.trim().toLowerCase() !== ANNOUNCEMENT_ADMIN_EMAIL
+  ) {
+    return res.status(403).json({
+      success: false,
+      message: 'Only admin can delete announcements',
+    });
+  }
+
+  const client = await announcementDb.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const announcement = await client.query(
+      'SELECT id FROM announcements WHERE id = $1',
+      [id],
+    );
+
+    if (announcement.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Announcement not found',
+      });
+    }
+
+    // Delete related records first
+    await client.query(
+      'DELETE FROM announcement_likes WHERE announcement_id = $1',
+      [id],
+    );
+
+    await client.query(
+      'DELETE FROM announcement_media WHERE announcement_id = $1',
+      [id],
+    );
+
+    await client.query(
+      'DELETE FROM announcements WHERE id = $1',
+      [id],
+    );
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Announcement deleted successfully',
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Delete announcement error:', error);
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete announcement',
+    });
+  } finally {
+    client.release();
+  }
+});
+
+
+
+
+app.post(
+  '/upload-announcement-media',
+  hubspotUpload.array('files', 5),
+  async (req, res) => {
+    const files = req.files || [];
+    const uploadedFiles = [];
+
+    try {
+      if (files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Please select at least one file.',
+        });
+      }
+
+      for (const file of files) {
+        if (
+          !file.mimetype.startsWith('image/') &&
+          !file.mimetype.startsWith('video/')
+        ) {
+          throw new Error('Only image and video files are allowed.');
+        }
+
+        const formData = new FormData();
+
+        formData.append('file', fs.createReadStream(file.path));
+        formData.append('fileName', file.originalname);
+        formData.append('folderId', '204201997753');
+
+        formData.append(
+          'options',
+          JSON.stringify({ access: 'PUBLIC_INDEXABLE' })
+        );
+
+        const response = await axios.post(
+          'https://api.hubapi.com/files/v3/files',
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${HUBSPOT_API_KEY}`,
+              ...formData.getHeaders(),
+            },
+          }
+        );
+
+        uploadedFiles.push({
+          id: response.data.id,
+          url: response.data.url,
+          name: file.originalname,
+          type: file.mimetype.startsWith('video/')
+            ? 'video'
+            : 'image',
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        files: uploadedFiles,
+      });
+
+    } catch (err) {
+      console.log(
+        'Announcement media upload error:',
+        err.response?.data || err
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: err.message || 'Announcement media upload failed.',
+      });
+
+    } finally {
+      for (const file of files) {
+        if (file.path && fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+      }
+    }
+  }
+);
+
+
+
+// ANNOUNCEMENTS END
+
 
 
 
@@ -197,8 +767,6 @@ app.post('/ask-alex', async (req, res) => {
     });
   }
 });
-
-
 
 
 
@@ -4325,7 +4893,7 @@ app.post('/send-hubspot-message', async (req, res) => {
   }
 });
 
- 
+
 
 
 
@@ -4353,7 +4921,6 @@ app.get('/customer-news', async (req, res) => {
     });
   }
 });
-
 
 
 

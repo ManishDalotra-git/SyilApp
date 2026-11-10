@@ -61,6 +61,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: '#fff',
     paddingTop: 0,
+    marginTop : 60,
   },
   arrowIcon: {
     width: 32,

@@ -12,6 +12,7 @@
   "dependencies": {
     "@native-html/table-plugin": "^5.3.1",
     "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-camera-roll/camera-roll": "^7.10.2",
     "@react-native-community/checkbox": "^0.5.20",
     "@react-native-documents/picker": "^12.0.1",
     "@react-native-firebase/app": "^26.1.0",
@@ -32,14 +33,14 @@
     "react": "19.2.0",
     "react-native": "0.83.1",
     "react-native-fs": "^2.20.0",
-    "react-native-image-picker": "^8.2.1",
+    "react-native-image-picker": "^8.3.0",
     "react-native-image-viewing": "^0.2.2",
     "react-native-image-zoom-viewer": "^3.0.1",
     "react-native-render-html": "^6.3.4",
     "react-native-safe-area-context": "^5.6.2",
     "react-native-screens": "^4.19.0",
     "react-native-vector-icons": "^10.3.0",
-    "react-native-video": "^6.19.2",
+    "react-native-video": "^6.19.3",
     "react-native-webview": "^13.16.1"
   },
   "devDependencies": {

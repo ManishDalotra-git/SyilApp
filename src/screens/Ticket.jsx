@@ -267,7 +267,7 @@ const formatCategoryLabel = (key) => {
         body: JSON.stringify({ contactId, ticketData }),
       });
 
-      let dataTest = JSON.stringify({ contactId, ticketData });
+      let dataTest = JSON.stringify({ contactId, ticketData }); 
       console.log('dataTest---- ' , dataTest);
 
       const textTicket = await responseTicket.json(); // read once

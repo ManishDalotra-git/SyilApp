@@ -1,7 +1,5 @@
 import { StyleSheet, Text, View, ImageBackground , TouchableOpacity, Image  } from 'react-native'
-import React, {
-  useEffect,
-} from 'react';
+import React, {useEffect,} from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import Home from './src/screens/Home';
@@ -25,66 +23,39 @@ import Chatscreen from './src/screens/Chatscreen';
 import CustomerNewsListing from './src/screens/CustomerNewsListing';
 import CustomerNewsDetail from './src/screens/CustomerNewsDetail';
 import WebViewScreen from './src/screens/WebViewScreen';
+import Announcements from './src/screens/Announcements';
+import AnnouncementsListing from './src/screens/AnnouncementsListing';
 
-import {
-  NavigationContainer,
-} from '@react-navigation/native';
-
+import {NavigationContainer,} from '@react-navigation/native';
 
 import {navigationRef} from './src/navigation/navigationRef';
 import {setupNotificationOpenHandlers,} from './src/utils/fcm';
 
-
-
 const Stack = createNativeStackNavigator();
 //export const navigationRef = createNavigationContainerRef();
 
-  
 const App = () => {
-
-
    useEffect(() => {
-
-    console.log(
-      '=========================================='
-    );
-
-    console.log(
-      'APP: Setting notification handlers'
-    );
-
-    console.log(
-      '=========================================='
-    );
-
+    console.log('==========================================');
+    console.log('APP: Setting notification handlers');
+    console.log('==========================================');
 
     // -------------------------------------------------
     // SETUP FCM NOTIFICATION OPEN HANDLERS
     // -------------------------------------------------
 
-    const unsubscribe =
-      setupNotificationOpenHandlers();
-
+    const unsubscribe = setupNotificationOpenHandlers();
 
     // -------------------------------------------------
     // CLEANUP
     // -------------------------------------------------
 
     return () => {
-
-      if (
-        unsubscribe
-      ) {
-
+      if ( unsubscribe ) {
         unsubscribe();
-
       }
-
     };
-
   }, []);
-
-
 
   return (
     <NavigationContainer ref={navigationRef} 
@@ -117,6 +88,8 @@ const App = () => {
         <Stack.Screen name="CustomerNewsListing" component={CustomerNewsListing} options={{ headerShown: false }} />
         <Stack.Screen name="CustomerNewsDetail" component={CustomerNewsDetail} options={{ headerShown: false }} />
         <Stack.Screen name="WebViewScreen" component={WebViewScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Announcements" component={Announcements} options={{ headerShown: false }} />
+        <Stack.Screen name="AnnouncementsListing" component={AnnouncementsListing} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   )

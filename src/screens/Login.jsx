@@ -88,6 +88,11 @@ const Login = () => {
 
       console.log('STEP 0: Calling login API');
 
+
+
+      //http://192.168.0.94:3000
+      //https://syilapp-w8ye.onrender.com
+
       const response = await fetch(
         'https://syilapp-w8ye.onrender.com/check_login_detail',
         {
@@ -106,72 +111,41 @@ const Login = () => {
 
       console.log('STEP 0 COMPLETE: Login API response received');
 
-
       // =====================================================
       // READ RESPONSE
       // =====================================================
 
       const responseText =
         await response.text();
-
-      console.log(
-        'Login HTTP status:',
-        response.status
-      );
-
-      console.log(
-        'Login raw response:',
-        responseText
-      );
-
+        console.log('Login HTTP status:', response.status);
+        console.log('Login raw response:', responseText);
 
       let result = {};
-
       try {
-
         result =
           responseText
             ? JSON.parse(responseText)
             : {};
-
       } catch (error) {
-
         console.log(
           'Login JSON parse error:',
           error
         );
-
         setLoading(false);
-
-        alert(
-          'Invalid server response'
-        );
-
+        alert('Invalid server response');
         return;
       }
-
 
       // =====================================================
       // SERVER LOGIN FAILED
       // =====================================================
 
       if (!response.ok) {
-
-        console.log(
-          'Login failed:',
-          result
-        );
-
+        console.log('Login failed:', result);
         setLoading(false);
-
-        alert(
-          result.message ||
-          'Login failed'
-        );
-
+        alert(result.message ||'Login failed');
         return;
       }
-
 
       // =====================================================
       // GET MOBILE APP PERMISSION
@@ -184,12 +158,7 @@ const Login = () => {
           .trim()
           .toLowerCase();
 
-
-      console.log(
-        'Mobile App Permission:',
-        mobileAppPermission
-      );
-
+      console.log( 'Mobile App Permission:', mobileAppPermission );
 
       // =====================================================
       // DEALER APP PERMISSION CHECK
@@ -198,20 +167,11 @@ const Login = () => {
       if (
         mobileAppPermission !== 'dealer app'
       ) {
-
-        console.log(
-          'LOGIN BLOCKED: Dealer App permission missing'
-        );
-
+        console.log( 'LOGIN BLOCKED: Dealer App permission missing' );
         setLoading(false);
-
-        alert(
-          'You are not authorized to use the Dealer App.'
-        );
-
+        alert( 'You are not authorized to use the Dealer App.' );
         return;
       }
-
 
       // =====================================================
       // LOGIN SUCCESS
@@ -220,39 +180,28 @@ const Login = () => {
       console.log('==========================================');
       console.log('DEALER LOGIN SUCCESS');
       console.log('Contact ID:', result.contactId);
-      console.log(
-        'Permission:',
-        result.user?.mobile_app_permission
-      );
+      console.log('Permission:', result.user?.mobile_app_permission);
       console.log('==========================================');
-
 
       // =====================================================
       // SAVE LOGIN STATE
       // =====================================================
 
       console.log('STEP 1: Saving isLoggedIn');
-
       await AsyncStorage.setItem(
         'isLoggedIn',
         'true'
       );
 
       console.log('STEP 1 COMPLETE');
-
-
-      console.log('STEP 2: Saving lastLoginTime');
-
-      await AsyncStorage.setItem(
-        'lastLoginTime',
-        Date.now().toString()
-      );
+      // console.log('STEP 2: Saving lastLoginTime');
+      // await AsyncStorage.setItem(
+      //   'lastLoginTime',
+      //   Date.now().toString()
+      // );
 
       console.log('STEP 2 COMPLETE');
-
-
       console.log('STEP 3: Saving userEmail');
-
       await AsyncStorage.setItem(
         'userEmail',
         normalizedEmail
@@ -260,49 +209,32 @@ const Login = () => {
 
       console.log('STEP 3 COMPLETE');
 
-
       // =====================================================
       // SAVE MOBILE APP PERMISSION
       // =====================================================
 
-      console.log(
-        'STEP 4: Saving mobile_app_permission'
-      );
-
+      console.log('STEP 4: Saving mobile_app_permission');
       await AsyncStorage.setItem(
         'mobile_app_permission',
         String(
           result.user?.mobile_app_permission ?? ''
         )
       );
-
       console.log('STEP 4 COMPLETE');
-
 
       // =====================================================
       // SAVE CONTACT ID
       // =====================================================
 
-      console.log(
-        'STEP 5: Saving contact ID'
-      );
-
-      setContactId(
-        result.contactId
-      );
-
-      console.log(
-        'STEP 5 COMPLETE'
-      );
-
+      console.log('STEP 5: Saving contact ID');
+      setContactId(result.contactId);
+      console.log('STEP 5 COMPLETE');
 
       // =====================================================
       // SAVE COMPLETE USER DATA
       // =====================================================
-
-      console.log(
-        'STEP 6: Saving userData'
-      );
+      
+      console.log('STEP 6: Saving userData');
 
       await AsyncStorage.setItem(
         'userData',
@@ -312,50 +244,29 @@ const Login = () => {
         })
       );
 
-      console.log(
-        'STEP 6 COMPLETE'
-      );
-
+      console.log( 'STEP 6 COMPLETE' );
 
       // =====================================================
       // SAVE INDIVIDUAL USER DATA
       // =====================================================
 
-      console.log(
-        'STEP 7: Saving userID'
-      );
+      console.log('STEP 7: Saving userID');
 
       await AsyncStorage.setItem(
         'userID',
-        String(
-          result.contactId ?? ''
-        )
+        String( result.contactId ?? '' )
       );
 
-      console.log(
-        'STEP 7 COMPLETE'
-      );
-
-
-      console.log(
-        'STEP 8: Saving userFirstName'
-      );
+      console.log('STEP 7 COMPLETE' );
+      console.log('STEP 8: Saving userFirstName');
 
       await AsyncStorage.setItem(
         'userFirstName',
-        String(
-          result.user?.firstName ?? ''
-        )
+        String(result.user?.firstName ?? '')
       );
 
-      console.log(
-        'STEP 8 COMPLETE'
-      );
-
-
-      console.log(
-        'STEP 9: Saving userLastName'
-      );
+      console.log('STEP 8 COMPLETE');
+      console.log('STEP 9: Saving userLastName');
 
       await AsyncStorage.setItem(
         'userLastName',
@@ -364,14 +275,8 @@ const Login = () => {
         )
       );
 
-      console.log(
-        'STEP 9 COMPLETE'
-      );
-
-
-      console.log(
-        'STEP 10: Saving userBio'
-      );
+      console.log('STEP 9 COMPLETE');
+      console.log('STEP 10: Saving userBio');
 
       await AsyncStorage.setItem(
         'userBio',
@@ -380,14 +285,8 @@ const Login = () => {
         )
       );
 
-      console.log(
-        'STEP 10 COMPLETE'
-      );
-
-
-      console.log(
-        'STEP 11: Saving userPhone'
-      );
+      console.log('STEP 10 COMPLETE');
+      console.log('STEP 11: Saving userPhone');
 
       await AsyncStorage.setItem(
         'userPhone',
@@ -396,14 +295,8 @@ const Login = () => {
         )
       );
 
-      console.log(
-        'STEP 11 COMPLETE'
-      );
-
-
-      console.log(
-        'STEP 12: Saving userGender'
-      );
+      console.log('STEP 11 COMPLETE');
+      console.log('STEP 12: Saving userGender');
 
       await AsyncStorage.setItem(
         'userGender',
@@ -412,14 +305,8 @@ const Login = () => {
         )
       );
 
-      console.log(
-        'STEP 12 COMPLETE'
-      );
-
-
-      console.log(
-        'STEP 13: Saving app_support_team_member'
-      );
+      console.log('STEP 12 COMPLETE');
+      console.log('STEP 13: Saving app_support_team_member');
 
       await AsyncStorage.setItem(
         'app_support_team_member',
@@ -428,84 +315,37 @@ const Login = () => {
         )
       );
 
-      console.log(
-        'STEP 13 COMPLETE'
-      );
-
-
-      console.log(
-        '=========================================='
-      );
-
-      console.log(
-        'ALL ASYNC STORAGE STEPS COMPLETED'
-      );
-
-      console.log(
-        'NOW GOING TO FCM'
-      );
-
-      console.log(
-        '=========================================='
-      );
-
+      console.log('STEP 13 COMPLETE');
+      console.log('==========================================');
+      console.log('ALL ASYNC STORAGE STEPS COMPLETED');
+      console.log('NOW GOING TO FCM');
+      console.log('==========================================');
 
       // =====================================================
       // SAVE FCM TOKEN
       // =====================================================
 
-      console.log(
-        'BEFORE FCM CALL'
-      );
-      console.log(
-        'Calling saveFCMToken with:',
-        normalizedEmail
-      );
+      console.log('BEFORE FCM CALL');
+      console.log('Calling saveFCMToken with:',normalizedEmail);
       console.log(
         'Platform:',
         Platform.OS
       );
 
       try {
-        console.log(
-          'FCM: Starting saveFCMToken()...'
-        );
+        console.log('FCM: Starting saveFCMToken()...');
         console.log('RELEASE FCM TEST V2 - ABOUT TO CALL SAVETOKEN');
-        await saveFCMToken(
-          normalizedEmail
-        );
-        console.log(
-          '=========================================='
-        );
-        console.log(
-          'FCM CALL COMPLETED SUCCESSFULLY'
-        );
-        console.log(
-          '=========================================='
-        );
+        await saveFCMToken(normalizedEmail);
+        console.log('==========================================');
+        console.log('FCM CALL COMPLETED SUCCESSFULLY');
+        console.log('==========================================');
       } catch (fcmError) {
-        console.log(
-          '=========================================='
-        );
-        console.log(
-          'FCM CALL FAILED'
-        );
-        console.log(
-          'Dealer FCM token save error:',
-          fcmError
-        );
-
-        console.log(
-          'FCM error message:',
-          fcmError?.message
-        );
-        console.log(
-          'FCM error stack:',
-          fcmError?.stack
-        );
-        console.log(
-          '=========================================='
-        );
+        console.log('==========================================');
+        console.log('FCM CALL FAILED');
+        console.log('Dealer FCM token save error:', fcmError);
+        console.log('FCM error message:', fcmError?.message );
+        console.log('FCM error stack:',fcmError?.stack );
+        console.log('==========================================');
         /*
          * FCM fail hone par login block nahi karna.
          * User phir bhi app use kar sakta hai.
@@ -517,153 +357,51 @@ const Login = () => {
       // LISTEN FOR FCM TOKEN REFRESH
       // =====================================================
 
-      console.log(
-        '=========================================='
-      );
-
-      console.log(
-        'BEFORE FCM REFRESH LISTENER'
-      );
-
+      console.log('==========================================');
+      console.log('BEFORE FCM REFRESH LISTENER');
 
       try {
-
-        console.log(
-          'Starting FCM token refresh listener...'
-        );
-
-        startFCMTokenRefreshListener(
-          normalizedEmail
-        );
-
-        console.log(
-          'FCM REFRESH LISTENER STARTED'
-        );
-
+        console.log('Starting FCM token refresh listener...');
+        startFCMTokenRefreshListener(normalizedEmail);
+        console.log('FCM REFRESH LISTENER STARTED');
       } catch (fcmRefreshError) {
-
-        console.log(
-          'FCM refresh listener error:',
-          fcmRefreshError
-        );
-
-        console.log(
-          'FCM refresh error message:',
-          fcmRefreshError?.message
-        );
-
-        console.log(
-          'FCM refresh error stack:',
-          fcmRefreshError?.stack
-        );
+        console.log('FCM refresh listener error:',fcmRefreshError);
+        console.log('FCM refresh error message:',fcmRefreshError?.message);
+        console.log('FCM refresh error stack:',fcmRefreshError?.stack);
       }
 
-
-      console.log(
-        'AFTER FCM REFRESH LISTENER'
-      );
-
-      console.log(
-        '=========================================='
-      );
-
+      console.log('AFTER FCM REFRESH LISTENER');
+      console.log('==========================================');
 
       // =====================================================
       // DEBUG SAVED DATA
       // =====================================================
 
-      console.log(
-        'STEP 14: Reading saved data'
-      );
-
-      const savedPermission =
-        await AsyncStorage.getItem(
-          'mobile_app_permission'
-        );
-
-
-      const savedUserID =
-        await AsyncStorage.getItem(
-          'userID'
-        );
-
-
-      const savedEmail =
-        await AsyncStorage.getItem(
-          'userEmail'
-        );
-
-
-      console.log(
-        'Saved Permission:',
-        savedPermission
-      );
-
-      console.log(
-        'Saved User ID:',
-        savedUserID
-      );
-
-      console.log(
-        'Saved Email:',
-        savedEmail
-      );
-
+      console.log('STEP 14: Reading saved data');
+      const savedPermission = await AsyncStorage.getItem('mobile_app_permission');
+      const savedUserID = await AsyncStorage.getItem('userID');
+      const savedEmail = await AsyncStorage.getItem('userEmail');
+      console.log( 'Saved Permission:',savedPermission);
+      console.log( 'Saved User ID:',savedUserID);
+      console.log( 'Saved Email:',savedEmail);
 
       // =====================================================
       // GO TO HOME
       // =====================================================
 
-      console.log(
-        'STEP 15: Going to Home'
-      );
-
+      console.log('STEP 15: Going to Home');
       setLoading(false);
-
-      navigation.replace(
-        'Home'
-      );
-
-
-      console.log(
-        'STEP 15 COMPLETE: Home navigation triggered'
-      );
-
-
+      navigation.replace('Home');
+      console.log('STEP 15 COMPLETE: Home navigation triggered');
     } catch (error) {
-
-      console.log(
-        '=========================================='
-      );
-
-      console.log(
-        'DEALER LOGIN ERROR'
-      );
-
-      console.log(
-        'Error:',
-        error
-      );
-
-      console.log(
-        'Error message:',
-        error?.message
-      );
-
-      console.log(
-        'Error stack:',
-        error?.stack
-      );
-
-      console.log(
-        '=========================================='
-      );
-
+      console.log('==========================================');
+      console.log('DEALER LOGIN ERROR');
+      console.log('Error:',error);
+      console.log('Error message:',error?.message);
+      console.log('Error stack:',error?.stack);
+      console.log('==========================================');
       setLoading(false);
-
-      alert(
-        'Network error'
-      );
+      alert('Network error');
     }
   };
 
@@ -676,258 +414,59 @@ const Login = () => {
 
   return (
 
-    <ImageBackground
-      source={require('../../images/Login_System.png')}
-      style={styles.background}
-      resizeMode="cover"
-    >
-
-      <KeyboardAvoidingView
-        style={{
-          flex: 1,
-        }}
-        behavior={
-          Platform.OS === 'ios'
-            ? 'padding'
-            : 'height'
-        }
-        keyboardVerticalOffset={0}
-      >
-
-        <ScrollView
-          contentContainerStyle={
-            styles.container
-          }
-          showsVerticalScrollIndicator={
-            false
-          }
-        >
-
+    <ImageBackground source={require('../../images/Login_System.png')} style={styles.background} resizeMode="cover" >
+      <KeyboardAvoidingView style={{ flex: 1, }} behavior={ Platform.OS === 'ios' ? 'padding' : 'height' } keyboardVerticalOffset={0} >
+        <ScrollView contentContainerStyle={ styles.container } showsVerticalScrollIndicator={ false } >
           {/* Logo */}
-
-          <View
-            style={styles.logoAlign}
-          >
-
-            <Image
-              source={require(
-                '../../images/syil_logo_white.png'
-              )}
-              style={styles.logo}
-            />
-
+          <View style={styles.logoAlign} >
+            <Image source={require( '../../images/syil_logo_white.png' )} style={styles.logo} />
           </View>
-
-
           {/* Welcome */}
-
-          <Text
-            style={styles.welcome}
-          >
-            Welcome back!
-          </Text>
-
-
+          <Text style={styles.welcome} > Welcome back! </Text>
           {/* White Card */}
-
-          <View
-            style={styles.card}
-          >
-
-            <Text
-              style={styles.signIn}
-            >
-              Sign In
-            </Text>
-
-
-            <Text
-              style={styles.subText}
-            >
+          <View style={styles.card}>
+            <Text style={styles.signIn}> Sign In </Text>
+            <Text style={styles.subText} >
               Enter Your email address and
               password to sign in the
               Customer Portal.
             </Text>
-
-
             {/* Email */}
-
-            <Text
-              style={styles.label}
-            >
-              Email Address
-            </Text>
-
-
-            <TextInput
-              style={styles.input}
-              placeholder="Enter Your Email Address"
-              value={username}
-              onChangeText={
-                setUsername
-              }
-              placeholderTextColor="#999"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-
+            <Text style={styles.label} > Email Address </Text>
+            <TextInput style={styles.input} placeholder="Enter Your Email Address" value={username} onChangeText={ setUsername } placeholderTextColor="#999" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} />
             {/* Password */}
-
-            <Text
-              style={styles.label}
-            >
-              Password
-            </Text>
-
-
-            <View
-              style={
-                styles.passwordContainer
-              }
-            >
-
-              <TextInput
-                style={
-                  styles.passwordInput
-                }
-                placeholder="Enter Your Password"
-                secureTextEntry={
-                  secure
-                }
-                value={password}
-                onChangeText={
-                  setPassword
-                }
-                placeholderTextColor="#999"
-                autoCapitalize="none"
-              />
-
-
-              <TouchableOpacity
-                onPress={() =>
-                  setSecure(!secure)
-                }
-              >
-
+            <Text style={styles.label} > Password </Text>
+            <View style={ styles.passwordContainer } >
+              <TextInput style={ styles.passwordInput } placeholder="Enter Your Password" secureTextEntry={ secure } value={password} onChangeText={ setPassword } placeholderTextColor="#999" autoCapitalize="none" />
+              <TouchableOpacity onPress={() => setSecure(!secure) } >
                 <Image
-                  source={
-                    secure
-                      ? require(
-                          '../../images/hide_icon.png'
-                        )
-                      : require(
-                          '../../images/show_icon.png'
-                        )
-                  }
-                  style={[
-                    styles.eyeIcon,
-                    secure
-                      ? styles.hideIcon
-                      : styles.showIcon,
-                  ]}
+                  source={ secure ? require('../../images/hide_icon.png' ) : require('../../images/show_icon.png' ) }
+                  style={[ styles.eyeIcon, secure ? styles.hideIcon : styles.showIcon, ]}
                 />
-
               </TouchableOpacity>
-
             </View>
-
-
             {/* Forgot Password */}
-
-            <Text
-              onPress={() =>
-                navigation.navigate(
-                  'ForgotPassword'
-                )
-              }
-              style={styles.forgot}
-            >
-              Forgot Password?
-            </Text>
-
-
+            <Text onPress={() => navigation.navigate( 'ForgotPassword' ) } style={styles.forgot} > Forgot Password? </Text>
             {/* Login Button */}
-
-            <TouchableOpacity
-              disabled={loading}
-              style={[
-                styles.button,
-                loading && {
-                  opacity: 0.6,
-                },
-              ]}
-              onPress={
-                handleSubmit
-              }
-            >
-
-              <Text
-                style={styles.buttonText}
-              >
-                Log In
-              </Text>
-
+            <TouchableOpacity disabled={loading} style={[ styles.button, loading && { opacity: 0.6, }, ]} onPress={ handleSubmit } >
+              <Text style={styles.buttonText} > Log In </Text>
             </TouchableOpacity>
-
           </View>
-
-
           {/* Footer */}
-
-          <Text
-            style={styles.footer}
-            onPress={() =>
-              Linking.openURL(
-                'mailto:support@syil.com'
-              )
-            }
-          >
-
+          <Text style={styles.footer} onPress={() => Linking.openURL( 'mailto:support@syil.com' ) } >
             Need Help?{' '}
-
-            <Text
-              style={styles.support}
-            >
-              Contact Support
-            </Text>
-
+            <Text style={styles.support}>Contact Support</Text>
           </Text>
-
-
         </ScrollView>
-
 
         {/* Loading */}
 
-        <Modal
-          visible={loading}
-          transparent
-          animationType="fade"
-        >
-
-          <View
-            style={
-              styles.loadingOverlay
-            }
-          >
-
-            <Text
-              style={
-                styles.loadingText
-              }
-            >
-              Please wait...
-            </Text>
-
+        <Modal visible={loading} transparent animationType="fade" >
+          <View style={ styles.loadingOverlay } >
+            <Text style={ styles.loadingText } > Please wait... </Text>
           </View>
-
         </Modal>
-
-
       </KeyboardAvoidingView>
-
     </ImageBackground>
   );
 };

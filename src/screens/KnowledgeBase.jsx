@@ -122,6 +122,9 @@ const KnowledgeBase = ({ navigation }) => {
 //   loadArticles();
 // }, []);
 
+//http://192.168.0.29:3000
+//https://syilapp-w8ye.onrender.com
+
 useEffect(() => {
   const fetchArticles = async () => {
     try {
@@ -465,7 +468,7 @@ useEffect(() => {
               renderItem={renderItem}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.articleListContent}
-              ListFooterComponent={<View style={{ height: 580 }} />}
+              ListFooterComponent={<View style={{ height: 750 }} />}
             />
           </View>
         </View>
