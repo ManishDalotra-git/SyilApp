@@ -31,7 +31,7 @@ const Loading = ({ navigation }) => {
     Animated.timing(scaleAnim, {
       toValue: 1,
       duration: 1000,
-      useNativeDriver: true,
+      useNativeDriver: true, 
     }).start();
 
     Animated.timing(progress, {
